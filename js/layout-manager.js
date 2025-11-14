@@ -11,12 +11,13 @@ const LayoutManager = (function() {
         currentLayout: 'default',
         panels: {
             sidebar: { visible: true, width: 250, minWidth: 200, maxWidth: 500 },
-            editor: { visible: true, flex: 1 },
+            editorArea: { visible: true, flex: 1 },
             terminal: { visible: true, height: 250, minHeight: 150, maxHeight: 500 },
             aiPanel: { visible: true, width: 380, minWidth: 300, maxWidth: 600 }
         },
         isResizing: false,
-        resizingPanel: null
+        resizingPanel: null,
+        initialized: false
     };
 
     // Predefined layouts
@@ -26,7 +27,7 @@ const LayoutManager = (function() {
             description: 'Standard IDE layout with all panels visible',
             panels: {
                 sidebar: { visible: true, width: 250 },
-                editor: { visible: true },
+                editorArea: { visible: true },
                 terminal: { visible: true, height: 250 },
                 aiPanel: { visible: true, width: 380 }
             }
@@ -36,7 +37,7 @@ const LayoutManager = (function() {
             description: 'Editor only - minimize distractions',
             panels: {
                 sidebar: { visible: false },
-                editor: { visible: true },
+                editorArea: { visible: true },
                 terminal: { visible: false },
                 aiPanel: { visible: false }
             }
@@ -46,7 +47,7 @@ const LayoutManager = (function() {
             description: 'Editor with sidebar and terminal',
             panels: {
                 sidebar: { visible: true, width: 250 },
-                editor: { visible: true },
+                editorArea: { visible: true },
                 terminal: { visible: true, height: 250 },
                 aiPanel: { visible: false }
             }
@@ -56,7 +57,7 @@ const LayoutManager = (function() {
             description: 'Full layout with larger terminal',
             panels: {
                 sidebar: { visible: true, width: 250 },
-                editor: { visible: true },
+                editorArea: { visible: true },
                 terminal: { visible: true, height: 350 },
                 aiPanel: { visible: true, width: 380 }
             }
@@ -66,7 +67,7 @@ const LayoutManager = (function() {
             description: 'Editor with AI panel, no terminal',
             panels: {
                 sidebar: { visible: true, width: 250 },
-                editor: { visible: true },
+                editorArea: { visible: true },
                 terminal: { visible: false },
                 aiPanel: { visible: true, width: 450 }
             }
@@ -76,7 +77,7 @@ const LayoutManager = (function() {
             description: 'Editor and terminal only',
             panels: {
                 sidebar: { visible: false },
-                editor: { visible: true },
+                editorArea: { visible: true },
                 terminal: { visible: true, height: 200 },
                 aiPanel: { visible: false }
             }
@@ -87,13 +88,18 @@ const LayoutManager = (function() {
      * Initialize the layout manager
      */
     function init() {
+        if (state.initialized) {
+            console.log('[LayoutManager] Already initialized, skipping');
+            return;
+        }
+
         console.log('[LayoutManager] Initializing...');
         
         // Load saved layout from localStorage
         loadLayoutFromStorage();
         
         // Apply current layout
-        applyLayout(state.currentLayout);
+        applyLayout(state.currentLayout, false);
         
         // Setup resize handlers
         setupResizeHandlers();
@@ -101,13 +107,14 @@ const LayoutManager = (function() {
         // Setup window resize listener
         window.addEventListener('resize', handleWindowResize);
         
+        state.initialized = true;
         console.log('[LayoutManager] Initialized successfully');
     }
 
     /**
      * Apply a layout by name
      */
-    function applyLayout(layoutName) {
+    function applyLayout(layoutName, shouldSave = true) {
         console.log('[LayoutManager] Applying layout:', layoutName);
         
         const layout = layouts[layoutName];
@@ -130,7 +137,9 @@ const LayoutManager = (function() {
         updatePanelSizes();
         
         // Save to localStorage
-        saveLayoutToStorage();
+        if (shouldSave) {
+            saveLayoutToStorage();
+        }
         
         // Dispatch event
         window.dispatchEvent(new CustomEvent('layoutChanged', { 
@@ -170,8 +179,18 @@ const LayoutManager = (function() {
     function updatePanelVisibility() {
         // Sidebar
         const sidebar = document.querySelector('.sidebar');
+        const sidebarResizer = document.getElementById('sidebarResizer');
         if (sidebar) {
             sidebar.style.display = state.panels.sidebar.visible ? 'flex' : 'none';
+        }
+        if (sidebarResizer) {
+            sidebarResizer.style.display = state.panels.sidebar.visible ? 'block' : 'none';
+        }
+
+        // Editor Area
+        const editorArea = document.getElementById('editorArea');
+        if (editorArea) {
+            editorArea.style.display = state.panels.editorArea.visible ? 'flex' : 'none';
         }
 
         // Terminal
@@ -186,8 +205,12 @@ const LayoutManager = (function() {
 
         // AI Panel
         const aiPanel = document.querySelector('.ai-panel');
+        const aiPanelResizer = document.getElementById('aiPanelResizer');
         if (aiPanel) {
             aiPanel.style.display = state.panels.aiPanel.visible ? 'flex' : 'none';
+        }
+        if (aiPanelResizer) {
+            aiPanelResizer.style.display = state.panels.aiPanel.visible ? 'block' : 'none';
         }
     }
 
@@ -218,7 +241,24 @@ const LayoutManager = (function() {
      * Setup resize handlers for panels
      */
     function setupResizeHandlers() {
-        // Terminal resizer (already exists, enhance it)
+        console.log('[LayoutManager] Setting up resize handlers...');
+
+        // Sidebar resizer (use existing HTML element)
+        const sidebarResizer = document.getElementById('sidebarResizer');
+        if (sidebarResizer) {
+            sidebarResizer.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                state.isResizing = true;
+                state.resizingPanel = 'sidebar';
+                document.body.style.cursor = 'ew-resize';
+                document.body.style.userSelect = 'none';
+                console.log('[LayoutManager] Started resizing sidebar');
+            });
+        } else {
+            console.warn('[LayoutManager] Sidebar resizer not found in HTML');
+        }
+
+        // Terminal resizer (use existing HTML element)
         const terminalResizer = document.getElementById('terminalResizer');
         if (terminalResizer) {
             terminalResizer.addEventListener('mousedown', (e) => {
@@ -227,88 +267,32 @@ const LayoutManager = (function() {
                 state.resizingPanel = 'terminal';
                 document.body.style.cursor = 'ns-resize';
                 document.body.style.userSelect = 'none';
+                console.log('[LayoutManager] Started resizing terminal');
             });
+        } else {
+            console.warn('[LayoutManager] Terminal resizer not found in HTML');
         }
 
-        // Add sidebar resizer
-        addSidebarResizer();
-        
-        // Add AI panel resizer
-        addAIPanelResizer();
+        // AI Panel resizer (use existing HTML element)
+        const aiPanelResizer = document.getElementById('aiPanelResizer');
+        if (aiPanelResizer) {
+            aiPanelResizer.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                state.isResizing = true;
+                state.resizingPanel = 'aiPanel';
+                document.body.style.cursor = 'ew-resize';
+                document.body.style.userSelect = 'none';
+                console.log('[LayoutManager] Started resizing AI panel');
+            });
+        } else {
+            console.warn('[LayoutManager] AI panel resizer not found in HTML');
+        }
 
         // Global mouse handlers
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
-    }
 
-    /**
-     * Add resizer for sidebar
-     */
-    function addSidebarResizer() {
-        const sidebar = document.querySelector('.sidebar');
-        if (!sidebar) return;
-
-        // Check if resizer already exists
-        if (sidebar.querySelector('.sidebar-resizer')) return;
-
-        const resizer = document.createElement('div');
-        resizer.className = 'sidebar-resizer';
-        resizer.style.cssText = `
-            position: absolute;
-            right: 0;
-            top: 0;
-            width: 5px;
-            height: 100%;
-            cursor: ew-resize;
-            background: transparent;
-            z-index: 10;
-        `;
-        
-        resizer.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            state.isResizing = true;
-            state.resizingPanel = 'sidebar';
-            document.body.style.cursor = 'ew-resize';
-            document.body.style.userSelect = 'none';
-        });
-
-        sidebar.style.position = 'relative';
-        sidebar.appendChild(resizer);
-    }
-
-    /**
-     * Add resizer for AI panel
-     */
-    function addAIPanelResizer() {
-        const aiPanel = document.querySelector('.ai-panel');
-        if (!aiPanel) return;
-
-        // Check if resizer already exists
-        if (aiPanel.querySelector('.ai-panel-resizer')) return;
-
-        const resizer = document.createElement('div');
-        resizer.className = 'ai-panel-resizer';
-        resizer.style.cssText = `
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 5px;
-            height: 100%;
-            cursor: ew-resize;
-            background: transparent;
-            z-index: 10;
-        `;
-        
-        resizer.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            state.isResizing = true;
-            state.resizingPanel = 'aiPanel';
-            document.body.style.cursor = 'ew-resize';
-            document.body.style.userSelect = 'none';
-        });
-
-        aiPanel.style.position = 'relative';
-        aiPanel.appendChild(resizer);
+        console.log('[LayoutManager] Resize handlers setup complete');
     }
 
     /**
@@ -335,6 +319,7 @@ const LayoutManager = (function() {
      */
     function handleMouseUp() {
         if (state.isResizing) {
+            console.log('[LayoutManager] Stopped resizing:', state.resizingPanel);
             state.isResizing = false;
             state.resizingPanel = null;
             document.body.style.cursor = '';
@@ -460,6 +445,19 @@ const LayoutManager = (function() {
     }
 
     /**
+     * Get complete state
+     */
+    function getState() {
+        return {
+            currentLayout: state.currentLayout,
+            sidebar: state.panels.sidebar,
+            editorArea: state.panels.editorArea,
+            terminal: state.panels.terminal,
+            aiPanel: state.panels.aiPanel
+        };
+    }
+
+    /**
      * Reset to default layout
      */
     function resetLayout() {
@@ -468,15 +466,21 @@ const LayoutManager = (function() {
     }
 
     // Public API
-    return {
+    const api = {
         init,
         applyLayout,
         togglePanel,
         getLayouts,
         getCurrentLayout,
         getPanelState,
+        getState,
         resetLayout
     };
+
+    // Expose to window for external access
+    window.layoutManager = api;
+
+    return api;
 })();
 
 // Auto-initialize when DOM is ready
