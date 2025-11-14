@@ -742,7 +742,6 @@
             display: flex;
             gap: 2px;
             margin-left: 12px;
-            overflow-x: auto;
         }
 
         .terminal-tab {
@@ -939,7 +938,6 @@
             align-items: center;
             justify-content: space-between;
             backdrop-filter: blur(10px);
-            flex-shrink: 0;
         }
 
         .ai-header-left {
@@ -1008,7 +1006,6 @@
             gap: 4px;
             background: var(--bg-tertiary);
             flex-shrink: 0;
-            overflow-x: auto;
         }
 
         .mode-btn {
@@ -1732,10 +1729,6 @@
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
 
-        .btn-primary:active {
-            transform: translateY(0);
-        }
-
         @media (max-width: 1024px) {
             .sidebar {
                 width: 200px;
@@ -1951,7 +1944,7 @@
                     </button>
                     <button class="sidebar-btn">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M1 12h6m6 0h6"/>
+                            <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6"/>
                         </svg>
                         Configure
                     </button>
@@ -2231,6 +2224,9 @@
     
     <!-- Load Layout Fixes (patches remaining HTML bugs) -->
     <script src="js/layout-fixes.js"></script>
+    
+    <!-- Load AppData Integration Layer (non-breaking enhancement) -->
+    <script src="js/appdata-integration.js"></script>
     
     <!-- Main Application Scripts -->
     <script>
