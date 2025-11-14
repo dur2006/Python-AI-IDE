@@ -39,12 +39,13 @@ def main():
     print("="*60 + "\n")
     
     # Run application with SocketIO
+    # NOTE: use_reloader=False to avoid watchdog/threading issues with Python 3.13
     socketio.run(
         app,
         host=host,
         port=port,
         debug=debug,
-        use_reloader=debug,
+        use_reloader=False,  # Disabled due to Python 3.13 threading incompatibility
         log_output=True,
         allow_unsafe_werkzeug=True  # For development
     )
