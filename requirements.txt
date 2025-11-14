@@ -1,7 +1,8 @@
+# ==========================================
 # Python AI IDE - Requirements
-# Production-ready dependencies with version pinning
+# ==========================================
 
-# Core Framework
+# Flask and Extensions
 Flask==3.0.0
 Flask-SocketIO==5.3.5
 Flask-CORS==4.0.0
@@ -17,9 +18,10 @@ cryptography==41.0.7
 PyJWT==2.8.0
 bcrypt==4.1.2
 
-# Web Server (Production)
+# Production Server (removed eventlet - incompatible with Python 3.13)
 gunicorn==21.2.0
-eventlet==0.33.3
+gevent==24.2.1
+gevent-websocket==0.10.1
 
 # Testing
 pytest==7.4.3
@@ -33,16 +35,16 @@ flake8==6.1.0
 pylint==3.0.3
 mypy==1.7.1
 
-# AI Integration (Optional - uncomment when ready)
-# openai==1.6.1
-# anthropic==0.8.1
+# ==========================================
+# Additional Dependencies
+# ==========================================
 
-# Utilities
+# Environment
 python-dotenv==1.0.0
 requests==2.31.0
 click==8.1.7
 
-# Development Tools
+# Development
 ipython==8.18.1
 ipdb==0.13.13
 
@@ -50,16 +52,16 @@ ipdb==0.13.13
 Sphinx==7.2.6
 sphinx-rtd-theme==2.0.0
 
-# Monitoring & Logging
+# Logging
 python-json-logger==2.0.7
 
-# File Operations
+# File Watching
 watchdog==3.0.0
 
-# Date/Time
+# Utilities
 python-dateutil==2.8.2
 
-# Environment
+# Build Tools
 setuptools>=65.5.1
 wheel>=0.38.0
 pip>=23.0.0
