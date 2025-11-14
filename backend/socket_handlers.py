@@ -4,14 +4,13 @@ Handles real-time WebSocket communication
 """
 
 from flask_socketio import emit
-from flask import current_app
 
 from backend.services.terminal_service import TerminalService
 from backend.services.ai_service import AIService
 
 
-def register_socket_handlers(socketio):
-    """Register all socket event handlers"""
+def register_socket_handlers(socketio, app):
+    """Register all socket event handlers with app context"""
     
     terminal_service = TerminalService()
     ai_service = AIService()
@@ -19,7 +18,7 @@ def register_socket_handlers(socketio):
     @socketio.on('connect')
     def handle_connect():
         """Handle client connection"""
-        current_app.logger.info("Client connected")
+        app.logger.info("Client connected")
         emit('connection_response', {
             'status': 'connected',
             'message': 'Successfully connected to AutoPilot IDE backend'
@@ -28,7 +27,7 @@ def register_socket_handlers(socketio):
     @socketio.on('disconnect')
     def handle_disconnect():
         """Handle client disconnection"""
-        current_app.logger.info("Client disconnected")
+        app.logger.info("Client disconnected")
     
     @socketio.on('terminal_command')
     def handle_terminal_command(data):
@@ -48,7 +47,7 @@ def register_socket_handlers(socketio):
             emit('terminal_output', result)
             
         except Exception as e:
-            current_app.logger.error(f"Error executing terminal command: {e}")
+            app.logger.error(f"Error executing terminal command: {e}")
             emit('terminal_output', {
                 'stderr': f'Error: {str(e)}',
                 'returncode': 1
@@ -75,7 +74,7 @@ def register_socket_handlers(socketio):
             })
             
         except Exception as e:
-            current_app.logger.error(f"Error processing AI message: {e}")
+            app.logger.error(f"Error processing AI message: {e}")
             emit('ai_response', {
                 'message': f'Error: {str(e)}',
                 'error': True
@@ -84,11 +83,11 @@ def register_socket_handlers(socketio):
     @socketio.on('ping')
     def handle_ping():
         """Handle ping for connection testing"""
-        emit('pong', {'timestamp': current_app.config.get('VERSION', '2.0.0')})
+        emit('pong', {'timestamp': app.config.get('VERSION', '2.0.0')})
     
     @socketio.on('error')
     def handle_error(error):
         """Handle socket errors"""
-        current_app.logger.error(f"Socket error: {error}")
+        app.logger.error(f"Socket error: {error}")
     
-    current_app.logger.info("Socket handlers registered successfully")
+    app.logger.info("Socket handlers registered successfully")
