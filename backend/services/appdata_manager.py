@@ -69,11 +69,11 @@ class AppDataManager:
             self._init_layouts()
             self._init_settings()
             
-            logger.info("✅ AppData initialization complete")
+            logger.info("[OK] AppData initialization complete")
             return True
             
         except Exception as e:
-            logger.error(f"❌ AppData initialization failed: {e}")
+            logger.error(f"[ERROR] AppData initialization failed: {e}")
             return False
     
     # ==================== PROJECTS ====================
@@ -247,7 +247,7 @@ class AppDataManager:
                     'author': 'AutoPilot Team',
                     'enabled': True,
                     'installed': True,
-                    'icon': '🐍'
+                    'icon': 'python'
                 },
                 {
                     'id': 2,
@@ -257,7 +257,7 @@ class AppDataManager:
                     'author': 'AutoPilot Team',
                     'enabled': True,
                     'installed': True,
-                    'icon': '📦'
+                    'icon': 'git'
                 },
                 {
                     'id': 3,
@@ -267,7 +267,7 @@ class AppDataManager:
                     'author': 'AutoPilot Team',
                     'enabled': True,
                     'installed': True,
-                    'icon': '✨'
+                    'icon': 'format'
                 },
                 {
                     'id': 4,
@@ -277,7 +277,7 @@ class AppDataManager:
                     'author': 'AutoPilot Team',
                     'enabled': True,
                     'installed': True,
-                    'icon': '🔍'
+                    'icon': 'search'
                 },
                 {
                     'id': 5,
@@ -287,7 +287,7 @@ class AppDataManager:
                     'author': 'AutoPilot Team',
                     'enabled': True,
                     'installed': True,
-                    'icon': '🐛'
+                    'icon': 'bug'
                 }
             ]
             self._write_json(self.extensions_file, default_extensions)
