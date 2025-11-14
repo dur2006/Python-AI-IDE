@@ -1,5 +1,6 @@
 # ==========================================
 # Python AI IDE - Requirements
+# Python 3.13+ Compatible
 # ==========================================
 
 # Flask and Extensions
@@ -18,10 +19,10 @@ cryptography==41.0.7
 PyJWT==2.8.0
 bcrypt==4.1.2
 
-# Production Server (removed eventlet - incompatible with Python 3.13)
+# Production Server
+# NOTE: Using threading mode - no async library needed
+# For production, use: gunicorn --workers 4 --threads 2 --bind 0.0.0.0:5000 app:app
 gunicorn==21.2.0
-gevent==24.2.1
-gevent-websocket==0.10.1
 
 # Testing
 pytest==7.4.3
