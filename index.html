@@ -188,6 +188,7 @@
             align-items: center;
             gap: 12px;
             transition: all var(--transition-fast);
+            user-select: none;
         }
 
         .dropdown-item:hover {
@@ -199,6 +200,13 @@
             height: 16px;
             opacity: 0.8;
             flex-shrink: 0;
+        }
+
+        .dropdown-item-check {
+            margin-left: auto;
+            color: var(--accent-primary);
+            font-weight: bold;
+            font-size: 14px;
         }
 
         .dropdown-separator {
@@ -286,6 +294,11 @@
             overflow: hidden;
         }
 
+        /* Panel visibility control */
+        .hidden {
+            display: none !important;
+        }
+
         .sidebar {
             width: 250px;
             background: var(--bg-secondary);
@@ -294,6 +307,32 @@
             flex-direction: column;
             transition: width var(--transition-normal);
             overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .sidebar-resizer {
+            width: 5px;
+            background: var(--bg-secondary);
+            cursor: ew-resize;
+            position: relative;
+            transition: background var(--transition-fast);
+            flex-shrink: 0;
+        }
+
+        .sidebar-resizer:hover {
+            background: rgba(102, 126, 234, 0.3);
+        }
+
+        .sidebar-resizer::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 50px;
+            background: var(--border-color);
+            border-radius: 2px;
         }
 
         .sidebar-header {
@@ -501,6 +540,7 @@
             flex-direction: column;
             background: var(--bg-primary);
             position: relative;
+            min-width: 0;
         }
 
         .editor-container {
@@ -661,6 +701,7 @@
             overflow: hidden;
             min-height: 150px;
             max-height: 500px;
+            flex-shrink: 0;
         }
 
         .terminal-section.collapsed {
@@ -862,6 +903,32 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .ai-panel-resizer {
+            width: 5px;
+            background: var(--bg-secondary);
+            cursor: ew-resize;
+            position: relative;
+            transition: background var(--transition-fast);
+            flex-shrink: 0;
+        }
+
+        .ai-panel-resizer:hover {
+            background: rgba(102, 126, 234, 0.3);
+        }
+
+        .ai-panel-resizer::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 50px;
+            background: var(--border-color);
+            border-radius: 2px;
         }
 
         .ai-header {
@@ -1482,6 +1549,193 @@
             50% { opacity: 1; }
         }
 
+        /* Project Modal Styles */
+        .project-modal {
+            max-width: 700px;
+        }
+
+        .project-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .project-tab {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 12px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            position: relative;
+            bottom: -1px;
+        }
+
+        .project-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .project-tab.active {
+            color: var(--accent-primary);
+            border-bottom-color: var(--accent-primary);
+        }
+
+        .project-tab-content {
+            display: none;
+        }
+
+        .project-tab-content.active {
+            display: block;
+        }
+
+        .recent-projects-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .project-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .project-item:hover {
+            background: #3a3d40;
+            border-color: var(--accent-primary);
+            transform: translateX(4px);
+        }
+
+        .project-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .project-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .project-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .project-path {
+            font-size: 12px;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-bottom: 2px;
+        }
+
+        .project-date {
+            font-size: 11px;
+            color: #888;
+        }
+
+        .project-arrow {
+            color: var(--text-secondary);
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .browse-section {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .project-path-input {
+            flex: 1;
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        .project-path-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+
+        .browse-results {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .create-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-input {
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-primary {
+            padding: 10px 16px;
+            background: var(--accent-primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #5a6ee8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
         @media (max-width: 1024px) {
             .sidebar {
                 width: 200px;
@@ -1525,35 +1779,84 @@
                     <span>AutoPilot IDE</span>
                 </div>
                 <div class="menu-tabs">
+                    <!-- Window Menu with Toggles -->
                     <div class="menu-tab-wrapper">
                         <button class="menu-tab" onclick="toggleDropdown('windowMenu', event)">Window</button>
                         <div class="dropdown-menu" id="windowMenu">
-                            <div class="dropdown-item">
+                            <div class="dropdown-item" onclick="window.layoutManager && window.layoutManager.togglePanel('sidebar')">
                                 <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
                                 </svg>
-                                Explorer ✓
+                                <span>Explorer</span>
+                                <span class="dropdown-item-check" id="explorerCheck">✓</span>
                             </div>
-                            <div class="dropdown-item">
+                            <div class="dropdown-item" onclick="window.layoutManager && window.layoutManager.togglePanel('editor')">
                                 <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
                                 </svg>
-                                Editor ✓
+                                <span>Editor</span>
+                                <span class="dropdown-item-check" id="editorCheck">✓</span>
                             </div>
-                            <div class="dropdown-item">
+                            <div class="dropdown-item" onclick="window.layoutManager && window.layoutManager.togglePanel('terminal')">
                                 <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
                                 </svg>
-                                Terminal ✓
+                                <span>Terminal</span>
+                                <span class="dropdown-item-check" id="terminalCheck">✓</span>
                             </div>
-                            <div class="dropdown-item">
+                            <div class="dropdown-item" onclick="window.layoutManager && window.layoutManager.togglePanel('aiPanel')">
                                 <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                                 </svg>
-                                AI Assistant ✓
+                                <span>AI Assistant</span>
+                                <span class="dropdown-item-check" id="aiPanelCheck">✓</span>
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Layouts Menu -->
+                    <div class="menu-tab-wrapper">
+                        <button class="menu-tab" onclick="toggleDropdown('layoutsMenu', event)">Layouts</button>
+                        <div class="dropdown-menu" id="layoutsMenu">
+                            <div class="dropdown-item" onclick="window.layoutManager && window.layoutManager.applyLayout('default')">
+                                <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/>
+                                </svg>
+                                Default Layout
+                            </div>
+                            <div class="dropdown-item" onclick="window.layoutManager && window.layoutManager.applyLayout('focus')">
+                                <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                </svg>
+                                Focus Mode
+                            </div>
+                            <div class="dropdown-item" onclick="window.layoutManager && window.layoutManager.applyLayout('coding')">
+                                <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                                </svg>
+                                Coding Layout
+                            </div>
+                            <div class="dropdown-item" onclick="window.layoutManager && window.layoutManager.applyLayout('debugging')">
+                                <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+                                </svg>
+                                Debugging Layout
+                            </div>
+                            <div class="dropdown-item" onclick="window.layoutManager && window.layoutManager.applyLayout('aiAssist')">
+                                <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                AI Assist Layout
+                            </div>
+                            <div class="dropdown-item" onclick="window.layoutManager && window.layoutManager.applyLayout('minimal')">
+                                <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="15" x2="21" y2="15"/>
+                                </svg>
+                                Minimal Layout
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="menu-tab-wrapper">
                         <button class="menu-tab" onclick="toggleDropdown('themeMenu', event)">Theme</button>
                         <div class="dropdown-menu" id="themeMenu">
@@ -1620,7 +1923,8 @@
         </div>
 
         <div class="main-content">
-            <div class="sidebar">
+            <!-- Sidebar with Resizer -->
+            <div class="sidebar" id="sidebar">
                 <div class="sidebar-header">
                     <div class="sidebar-header-left">
                         <div class="sidebar-title">Explorer</div>
@@ -1628,11 +1932,11 @@
                     </div>
                 </div>
                 <div class="sidebar-actions">
-                <button class="sidebar-btn" onclick="openProjectModal()" title="Open Project">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z"/>
-                    </svg>
-                </button>
+                    <button class="sidebar-btn" onclick="openProjectModal()" title="Open Project">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z"/>
+                        </svg>
+                    </button>
                     <button class="sidebar-btn">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
@@ -1659,8 +1963,10 @@
                     </div>
                 </div>
             </div>
+            
+            <div class="sidebar-resizer" id="sidebarResizer"></div>
 
-            <div class="editor-area">
+            <div class="editor-area" id="editorArea">
                 <div class="editor-and-terminal">
                     <div class="editor-container">
                         <div class="tabs">
@@ -1767,7 +2073,9 @@
                 </div>
             </div>
 
-            <div class="ai-panel">
+            <div class="ai-panel-resizer" id="aiPanelResizer"></div>
+
+            <div class="ai-panel" id="aiPanel">
                 <div class="ai-header">
                     <div class="ai-header-left">
                         <div class="ai-icon">✨</div>
@@ -1841,6 +2149,7 @@
         <div class="context-menu" id="contextMenu"></div>
     </div>
 
+    <!-- Extension Modals -->
     <div class="modal" id="manageExtensionsModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -1865,6 +2174,62 @@
         </div>
     </div>
 
+    <!-- Project Opener Modal -->
+    <div id="projectModal" class="modal">
+        <div class="modal-content project-modal">
+            <div class="modal-header">
+                <h2>Open Project</h2>
+                <button class="modal-close" onclick="closeProjectModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="project-tabs">
+                    <button class="project-tab active" onclick="switchProjectTab('recent')">Recent Projects</button>
+                    <button class="project-tab" onclick="switchProjectTab('browse')">Browse</button>
+                    <button class="project-tab" onclick="switchProjectTab('create')">Create New</button>
+                </div>
+                
+                <div id="recentTab" class="project-tab-content active">
+                    <div class="recent-projects-list"></div>
+                </div>
+                
+                <div id="browseTab" class="project-tab-content">
+                    <div class="browse-section">
+                        <input type="text" id="projectPath" placeholder="Enter project path..." class="project-path-input">
+                        <button class="btn-primary" onclick="browseProjects()">Browse Folder</button>
+                    </div>
+                    <div class="browse-results" id="browseResults"></div>
+                </div>
+                
+                <div id="createTab" class="project-tab-content">
+                    <div class="create-section">
+                        <div class="form-group">
+                            <label>Project Name</label>
+                            <input type="text" id="newProjectName" placeholder="My New Project" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label>Project Type</label>
+                            <select id="projectType" class="form-input">
+                                <option>Python</option>
+                                <option>JavaScript</option>
+                                <option>Web App</option>
+                                <option>Empty</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Location</label>
+                            <input type="text" id="projectLocation" placeholder="/home/user/projects" class="form-input">
+                        </div>
+                        <button class="btn-primary" onclick="createNewProject()">Create Project</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Layout Manager First -->
+    <script src="js/layout-manager.js"></script>
+    
+    <!-- Main Application Scripts -->
     <script>
         const API_BASE = 'http://localhost:5000/api';
         let socket = null;
@@ -2087,33 +2452,6 @@
             }
         });
 
-        const terminalResizer = document.getElementById('terminalResizer');
-        const terminalSection = document.getElementById('terminalSection');
-        let isResizing = false;
-
-        terminalResizer.addEventListener('mousedown', function(e) {
-            isResizing = true;
-            document.body.style.cursor = 'ns-resize';
-            document.body.style.userSelect = 'none';
-        });
-
-        document.addEventListener('mousemove', function(e) {
-            if (!isResizing) return;
-            
-            const containerRect = terminalSection.parentElement.getBoundingClientRect();
-            const newHeight = containerRect.bottom - e.clientY;
-            
-            if (newHeight >= 150 && newHeight <= 500) {
-                terminalSection.style.height = newHeight + 'px';
-            }
-        });
-
-        document.addEventListener('mouseup', function() {
-            isResizing = false;
-            document.body.style.cursor = '';
-            document.body.style.userSelect = '';
-        });
-
         const textarea = document.querySelector('.ai-input');
         textarea.addEventListener('input', function() {
             this.style.height = 'auto';
@@ -2175,589 +2513,254 @@
             }
         });
 
+        // Update window menu checkmarks based on layout state
+        function updateWindowMenuCheckmarks() {
+            if (!window.layoutManager) return;
+            
+            const state = window.layoutManager.getState();
+            document.getElementById('explorerCheck').style.display = state.sidebar.visible ? 'inline' : 'none';
+            document.getElementById('editorCheck').style.display = state.editor.visible ? 'inline' : 'none';
+            document.getElementById('terminalCheck').style.display = state.terminal.visible ? 'inline' : 'none';
+            document.getElementById('aiPanelCheck').style.display = state.aiPanel.visible ? 'inline' : 'none';
+        }
+
+        // Listen for layout changes
+        document.addEventListener('layoutChanged', updateWindowMenuCheckmarks);
+        document.addEventListener('panelToggled', updateWindowMenuCheckmarks);
+
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('[Main] Initializing application...');
             initSocket();
             fetchExtensions();
+            
+            // Initialize layout manager checkmarks
+            setTimeout(updateWindowMenuCheckmarks, 100);
+            
+            console.log('[Main] Application initialized');
         });
     </script>
+
+    <!-- Tree View Functionality -->
     <script>
-    // Tree View Functionality
-    document.addEventListener("DOMContentLoaded", function() {
-        // Initialize file tree with click handlers
-        const fileTree = document.getElementById("fileTree");
-        if (fileTree) {
-            const fileItems = fileTree.querySelectorAll(".file-item");
-            fileItems.forEach(item => {
-                item.addEventListener("click", function(e) {
-                    e.stopPropagation();
-                    fileItems.forEach(i => i.classList.remove("active"));
-                    this.classList.add("active");
-                    const fileName = this.textContent.trim();
-                    console.log("[TreeView] Selected file:", fileName);
-                    const editorTabs = document.querySelector(".tabs");
-                    if (editorTabs) {
-                        const existingTab = editorTabs.querySelector(".tab");
-                        if (existingTab) {
-                            existingTab.textContent = fileName;
+        document.addEventListener("DOMContentLoaded", function() {
+            const fileTree = document.getElementById("fileTree");
+            if (fileTree) {
+                const fileItems = fileTree.querySelectorAll(".file-item");
+                fileItems.forEach(item => {
+                    item.addEventListener("click", function(e) {
+                        e.stopPropagation();
+                        fileItems.forEach(i => i.classList.remove("active"));
+                        this.classList.add("active");
+                        const fileName = this.textContent.trim();
+                        console.log("[TreeView] Selected file:", fileName);
+                        const editorTabs = document.querySelector(".tabs");
+                        if (editorTabs) {
+                            const existingTab = editorTabs.querySelector(".tab");
+                            if (existingTab) {
+                                existingTab.textContent = fileName;
+                            }
                         }
-                    }
+                    });
                 });
-            });
-        }
-    });
-    </script>
-
-    <!-- Project Opener Modal -->
-    <div id="projectModal" class="modal">
-        <div class="modal-content project-modal">
-            <div class="modal-header">
-                <h2>Open Project</h2>
-                <button class="modal-close" onclick="closeProjectModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="project-tabs">
-                    <button class="project-tab active" onclick="switchProjectTab('recent')">Recent Projects</button>
-                    <button class="project-tab" onclick="switchProjectTab('browse')">Browse</button>
-                    <button class="project-tab" onclick="switchProjectTab('create')">Create New</button>
-                </div>
-                
-                <!-- Recent Projects Tab -->
-                <div id="recentTab" class="project-tab-content active">
-                    <div class="recent-projects-list">
-                        <!-- Populated by ProjectManager -->
-                    </div>
-                </div>
-                
-                <!-- Browse Tab -->
-                <div id="browseTab" class="project-tab-content">
-                    <div class="browse-section">
-                        <input type="text" id="projectPath" placeholder="Enter project path..." class="project-path-input">
-                        <button class="btn-primary" onclick="browseProjects()">Browse Folder</button>
-                    </div>
-                    <div class="browse-results" id="browseResults"></div>
-                </div>
-                
-                <!-- Create New Tab -->
-                <div id="createTab" class="project-tab-content">
-                    <div class="create-section">
-                        <div class="form-group">
-                            <label>Project Name</label>
-                            <input type="text" id="newProjectName" placeholder="My New Project" class="form-input">
-                        </div>
-                        <div class="form-group">
-                            <label>Project Type</label>
-                            <select id="projectType" class="form-input">
-                                <option>Python</option>
-                                <option>JavaScript</option>
-                                <option>Web App</option>
-                                <option>Empty</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Location</label>
-                            <input type="text" id="projectLocation" placeholder="/home/user/projects" class="form-input">
-                        </div>
-                        <button class="btn-primary" onclick="createNewProject()">Create Project</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <style>
-    .modal {
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.7);
-        animation: fadeIn 0.3s ease-in-out;
-    }
-
-    .modal.show {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-
-    .modal-content {
-        background: var(--bg-primary);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        max-width: 600px;
-        width: 90%;
-        max-height: 80vh;
-        overflow-y: auto;
-        animation: slideUp 0.3s ease-out;
-    }
-
-    @keyframes slideUp {
-        from {
-            transform: translateY(20px);
-            opacity: 0;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
-    }
-
-    .project-modal {
-        max-width: 700px;
-    }
-
-    .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 20px;
-        border-bottom: 1px solid var(--border-color);
-    }
-
-    .modal-header h2 {
-        margin: 0;
-        font-size: 18px;
-        color: var(--text-primary);
-    }
-
-    .modal-close {
-        background: none;
-        border: none;
-        font-size: 28px;
-        color: var(--text-secondary);
-        cursor: pointer;
-        padding: 0;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 4px;
-        transition: all 0.2s;
-    }
-
-    .modal-close:hover {
-        background: var(--bg-secondary);
-        color: var(--text-primary);
-    }
-
-    .modal-body {
-        padding: 20px;
-    }
-
-    .project-tabs {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 20px;
-        border-bottom: 1px solid var(--border-color);
-    }
-
-    .project-tab {
-        background: none;
-        border: none;
-        color: var(--text-secondary);
-        padding: 12px 16px;
-        cursor: pointer;
-        font-size: 14px;
-        border-bottom: 2px solid transparent;
-        transition: all 0.2s;
-        position: relative;
-        bottom: -1px;
-    }
-
-    .project-tab:hover {
-        color: var(--text-primary);
-    }
-
-    .project-tab.active {
-        color: var(--accent-primary);
-        border-bottom-color: var(--accent-primary);
-    }
-
-    .project-tab-content {
-        display: none;
-    }
-
-    .project-tab-content.active {
-        display: block;
-    }
-
-    .recent-projects-list {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .project-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px;
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: 6px;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .project-item:hover {
-        background: #3a3d40;
-        border-color: var(--accent-primary);
-        transform: translateX(4px);
-    }
-
-    .project-icon {
-        font-size: 24px;
-        flex-shrink: 0;
-    }
-
-    .project-info {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .project-title {
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--text-primary);
-        margin-bottom: 4px;
-    }
-
-    .project-path {
-        font-size: 12px;
-        color: var(--text-secondary);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        margin-bottom: 2px;
-    }
-
-    .project-date {
-        font-size: 11px;
-        color: #888;
-    }
-
-    .project-arrow {
-        color: var(--text-secondary);
-        font-size: 16px;
-        flex-shrink: 0;
-    }
-
-    .browse-section {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 16px;
-    }
-
-    .project-path-input {
-        flex: 1;
-        padding: 8px 12px;
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: 4px;
-        color: var(--text-primary);
-        font-size: 13px;
-    }
-
-    .project-path-input:focus {
-        outline: none;
-        border-color: var(--accent-primary);
-        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
-    }
-
-    .browse-results {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .create-section {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-    }
-
-    .form-group label {
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--text-primary);
-    }
-
-    .form-input {
-        padding: 8px 12px;
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: 4px;
-        color: var(--text-primary);
-        font-size: 13px;
-        font-family: inherit;
-    }
-
-    .form-input:focus {
-        outline: none;
-        border-color: var(--accent-primary);
-        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
-    }
-
-    .btn-primary {
-        padding: 10px 16px;
-        background: var(--accent-primary);
-        color: white;
-        border: none;
-        border-radius: 4px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .btn-primary:hover {
-        background: #5a6ee8;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-    }
-
-    .btn-primary:active {
-        transform: translateY(0);
-    }
-    </style>
-
-    <script>
-    // This script contains the fixed project system functions
-
-function initializeProjectSystem() {
-    console.log('[ProjectSystem] Initializing project system...');
-    
-    // Load project manager
-    if (typeof projectManager !== 'undefined') {
-        updateRecentProjectsList();
-        updateCurrentProjectDisplay();
-        console.log('[ProjectSystem] Project system initialized successfully');
-    } else {
-        console.error('[ProjectSystem] ProjectManager not loaded');
-    }
-}
-
-function updateRecentProjectsList() {
-    const recentList = document.querySelector('.recent-projects-list');
-    if (!recentList) return;
-    
-    const recentProjects = projectManager.getRecentProjects(10);
-    
-    recentList.innerHTML = recentProjects.map(project => `
-        <div class="project-item" data-project-id="${project.id}">
-            <div class="project-icon">📁</div>
-            <div class="project-info">
-                <div class="project-title">${project.name}</div>
-                <div class="project-path">${project.path}</div>
-                <div class="project-date">${projectManager.formatDate(project.lastOpened)}</div>
-            </div>
-            <div class="project-arrow">→</div>
-        </div>
-    `).join('');
-    
-    // Add click handlers to project items
-    document.querySelectorAll('.project-item[data-project-id]').forEach(item => {
-        item.addEventListener('click', function() {
-            const projectId = this.getAttribute('data-project-id');
-            openProject(projectId);
-        });
-    });
-    
-    console.log('[ProjectSystem] Updated recent projects list');
-}
-
-function updateCurrentProjectDisplay() {
-    const currentProject = projectManager.getCurrentProject();
-    if (!currentProject) return;
-    
-    // Update project name in sidebar
-    const projectNameEl = document.querySelector('.project-name');
-    if (projectNameEl) {
-        projectNameEl.textContent = currentProject.name;
-    }
-    
-    // Update file tree
-    updateFileTree(currentProject);
-    
-    console.log('[ProjectSystem] Updated current project display:', currentProject.name);
-}
-
-function updateFileTree(project) {
-    const fileTree = document.getElementById('fileTree');
-    if (!fileTree) return;
-    
-    if (!project.files || project.files.length === 0) {
-        fileTree.innerHTML = '<div class="empty-state">No files in project</div>';
-        return;
-    }
-    
-    fileTree.innerHTML = project.files.map(file => `
-        <div class="file-item" onclick="selectFile(this, '${file.name}')">
-            <span class="file-icon">${file.icon}</span>
-            <span>${file.name}</span>
-        </div>
-    `).join('');
-    
-    console.log('[ProjectSystem] Updated file tree with', project.files.length, 'files');
-}
-
-function openProjectModal() {
-    const modal = document.getElementById('projectModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        updateRecentProjectsList();
-        console.log('[ProjectSystem] Opened project modal');
-    }
-}
-
-function closeProjectModal() {
-    const modal = document.getElementById('projectModal');
-    if (modal) {
-        modal.style.display = 'none';
-        console.log('[ProjectSystem] Closed project modal');
-    }
-}
-
-function switchProjectTab(tabName) {
-    // Hide all tabs
-    document.querySelectorAll('.project-tab-content').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    
-    // Show selected tab
-    const selectedTab = document.getElementById(tabName + 'Tab');
-    if (selectedTab) {
-        selectedTab.classList.add('active');
-    }
-    
-    // Update tab buttons
-    document.querySelectorAll('.project-tab').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    event.target.classList.add('active');
-    
-    console.log('[ProjectSystem] Switched to tab:', tabName);
-}
-
-function openProject(projectId) {
-    console.log('[ProjectSystem] Opening project:', projectId);
-    
-    if (projectManager.setCurrentProject(projectId)) {
-        updateCurrentProjectDisplay();
-        closeProjectModal();
-        console.log('[ProjectSystem] Project opened successfully');
-    } else {
-        console.error('[ProjectSystem] Failed to open project:', projectId);
-    }
-}
-
-function selectFile(element, fileName) {
-    // Remove active class from all files
-    document.querySelectorAll('.file-item').forEach(item => {
-        item.classList.remove('active');
-    });
-    
-    // Add active class to selected file
-    element.classList.add('active');
-    
-    // Update editor tab
-    const editorTabs = document.querySelector('.tabs');
-    if (editorTabs) {
-        const existingTab = editorTabs.querySelector('.tab');
-        if (existingTab) {
-            existingTab.innerHTML = `
-                <span class="file-icon">📄</span>
-                <span>${fileName}</span>
-                <div class="tab-close" onclick="event.stopPropagation();">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
-                </div>
-            `;
-        }
-    }
-    
-    console.log('[ProjectSystem] Selected file:', fileName);
-}
-
-function browseProjects() {
-    console.log('[ProjectSystem] Browse projects clicked');
-    const pathInput = document.getElementById('projectPath');
-    if (pathInput) {
-        pathInput.focus();
-    }
-}
-
-function createNewProject() {
-    const name = document.getElementById('newProjectName').value;
-    const type = document.getElementById('projectType').value;
-    const location = document.getElementById('projectLocation').value;
-    
-    if (!name || name.trim() === '') {
-        alert('Please enter a project name');
-        return;
-    }
-    
-    try {
-        const project = projectManager.createProject(
-            name.trim(),
-            type,
-            location || undefined
-        );
-        
-        console.log('[ProjectSystem] Project created:', project.name);
-        
-        // Clear form
-        document.getElementById('newProjectName').value = '';
-        document.getElementById('projectLocation').value = '';
-        
-        // Update display
-        updateCurrentProjectDisplay();
-        updateRecentProjectsList();
-        closeProjectModal();
-        
-        alert(`Project "${name}" created successfully!`);
-    } catch (error) {
-        console.error('[ProjectSystem] Error creating project:', error);
-        alert('Error creating project: ' + error.message);
-    }
-}
-
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeProjectSystem);
-} else {
-    initializeProjectSystem();
-}
-    </script>
-
-    <script src="js/project-manager.js"></script>
-    <script>
-        // Initialize project system when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            if (typeof projectManager !== 'undefined') {
-                console.log('[Init] ProjectManager loaded successfully');
-                initializeProjectSystem();
-            } else {
-                console.error('[Init] ProjectManager failed to load');
             }
         });
+    </script>
+
+    <!-- Project System -->
+    <script src="js/project-manager.js"></script>
+    <script>
+        function initializeProjectSystem() {
+            console.log('[ProjectSystem] Initializing project system...');
+            
+            if (typeof projectManager !== 'undefined') {
+                updateRecentProjectsList();
+                updateCurrentProjectDisplay();
+                console.log('[ProjectSystem] Project system initialized successfully');
+            } else {
+                console.error('[ProjectSystem] ProjectManager not loaded');
+            }
+        }
+
+        function updateRecentProjectsList() {
+            const recentList = document.querySelector('.recent-projects-list');
+            if (!recentList) return;
+            
+            const recentProjects = projectManager.getRecentProjects(10);
+            
+            recentList.innerHTML = recentProjects.map(project => `
+                <div class="project-item" data-project-id="${project.id}">
+                    <div class="project-icon">📁</div>
+                    <div class="project-info">
+                        <div class="project-title">${project.name}</div>
+                        <div class="project-path">${project.path}</div>
+                        <div class="project-date">${projectManager.formatDate(project.lastOpened)}</div>
+                    </div>
+                    <div class="project-arrow">→</div>
+                </div>
+            `).join('');
+            
+            document.querySelectorAll('.project-item[data-project-id]').forEach(item => {
+                item.addEventListener('click', function() {
+                    const projectId = this.getAttribute('data-project-id');
+                    openProject(projectId);
+                });
+            });
+            
+            console.log('[ProjectSystem] Updated recent projects list');
+        }
+
+        function updateCurrentProjectDisplay() {
+            const currentProject = projectManager.getCurrentProject();
+            if (!currentProject) return;
+            
+            const projectNameEl = document.querySelector('.project-name');
+            if (projectNameEl) {
+                projectNameEl.textContent = currentProject.name;
+            }
+            
+            updateFileTree(currentProject);
+            
+            console.log('[ProjectSystem] Updated current project display:', currentProject.name);
+        }
+
+        function updateFileTree(project) {
+            const fileTree = document.getElementById('fileTree');
+            if (!fileTree) return;
+            
+            if (!project.files || project.files.length === 0) {
+                fileTree.innerHTML = '<div class="empty-state">No files in project</div>';
+                return;
+            }
+            
+            fileTree.innerHTML = project.files.map(file => `
+                <div class="file-item" onclick="selectFile(this, '${file.name}')">
+                    <span class="file-icon">${file.icon}</span>
+                    <span>${file.name}</span>
+                </div>
+            `).join('');
+            
+            console.log('[ProjectSystem] Updated file tree with', project.files.length, 'files');
+        }
+
+        function openProjectModal() {
+            const modal = document.getElementById('projectModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                updateRecentProjectsList();
+                console.log('[ProjectSystem] Opened project modal');
+            }
+        }
+
+        function closeProjectModal() {
+            const modal = document.getElementById('projectModal');
+            if (modal) {
+                modal.style.display = 'none';
+                console.log('[ProjectSystem] Closed project modal');
+            }
+        }
+
+        function switchProjectTab(tabName) {
+            document.querySelectorAll('.project-tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            const selectedTab = document.getElementById(tabName + 'Tab');
+            if (selectedTab) {
+                selectedTab.classList.add('active');
+            }
+            
+            document.querySelectorAll('.project-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            console.log('[ProjectSystem] Switched to tab:', tabName);
+        }
+
+        function openProject(projectId) {
+            console.log('[ProjectSystem] Opening project:', projectId);
+            
+            if (projectManager.setCurrentProject(projectId)) {
+                updateCurrentProjectDisplay();
+                closeProjectModal();
+                console.log('[ProjectSystem] Project opened successfully');
+            } else {
+                console.error('[ProjectSystem] Failed to open project:', projectId);
+            }
+        }
+
+        function selectFile(element, fileName) {
+            document.querySelectorAll('.file-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            element.classList.add('active');
+            
+            const editorTabs = document.querySelector('.tabs');
+            if (editorTabs) {
+                const existingTab = editorTabs.querySelector('.tab');
+                if (existingTab) {
+                    existingTab.innerHTML = `
+                        <span class="file-icon">📄</span>
+                        <span>${fileName}</span>
+                        <div class="tab-close" onclick="event.stopPropagation();">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                        </div>
+                    `;
+                }
+            }
+            
+            console.log('[ProjectSystem] Selected file:', fileName);
+        }
+
+        function browseProjects() {
+            console.log('[ProjectSystem] Browse projects clicked');
+            const pathInput = document.getElementById('projectPath');
+            if (pathInput) {
+                pathInput.focus();
+            }
+        }
+
+        function createNewProject() {
+            const name = document.getElementById('newProjectName').value;
+            const type = document.getElementById('projectType').value;
+            const location = document.getElementById('projectLocation').value;
+            
+            if (!name || name.trim() === '') {
+                alert('Please enter a project name');
+                return;
+            }
+            
+            try {
+                const project = projectManager.createProject(
+                    name.trim(),
+                    type,
+                    location || undefined
+                );
+                
+                console.log('[ProjectSystem] Project created:', project.name);
+                
+                document.getElementById('newProjectName').value = '';
+                document.getElementById('projectLocation').value = '';
+                
+                updateCurrentProjectDisplay();
+                updateRecentProjectsList();
+                closeProjectModal();
+                
+                alert(`Project "${name}" created successfully!`);
+            } catch (error) {
+                console.error('[ProjectSystem] Error creating project:', error);
+                alert('Error creating project: ' + error.message);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeProjectSystem);
+        } else {
+            initializeProjectSystem();
+        }
     </script>
 </body>
 </html>
