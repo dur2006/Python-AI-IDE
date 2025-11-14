@@ -1,0 +1,2763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AutoPilot IDE - AI-Enabled Integrated Development Environment">
+    <meta name="theme-color" content="#1e1e1e">
+    <title>AutoPilot IDE - AI-Enabled IDE</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252526;
+            --bg-tertiary: #2d2d30;
+            --border-color: #3e3e42;
+            --text-primary: #d4d4d4;
+            --text-secondary: #999;
+            --accent-primary: #667eea;
+            --accent-secondary: #764ba2;
+            --success: #89d185;
+            --error: #f48771;
+            --warning: #dcdcaa;
+            --transition-fast: 0.15s ease-out;
+            --transition-normal: 0.3s ease-out;
+            --transition-slow: 0.6s ease-in-out;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .top-bar {
+            background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+        }
+
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            cursor: pointer;
+            transition: transform var(--transition-normal);
+            user-select: none;
+        }
+
+        .logo:hover {
+            transform: scale(1.02);
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            animation: glow var(--transition-slow) infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); }
+            50% { box-shadow: 0 4px 20px rgba(102, 126, 234, 0.6); }
+        }
+
+        .menu-tabs {
+            display: flex;
+            gap: 2px;
+        }
+
+        .menu-tab-wrapper {
+            position: relative;
+        }
+
+        .menu-tab {
+            padding: 6px 14px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            font-weight: 500;
+            position: relative;
+        }
+
+        .menu-tab::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%) scaleX(0);
+            width: 80%;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            transition: transform var(--transition-normal);
+            border-radius: 2px;
+        }
+
+        .menu-tab:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .menu-tab:hover::after {
+            transform: translateX(-50%) scaleX(1);
+        }
+
+        .menu-tab.active {
+            background: var(--bg-tertiary);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            padding: 6px 0;
+            min-width: 220px;
+            z-index: 1000;
+            display: none;
+            margin-top: 4px;
+            animation: dropdownSlide var(--transition-normal);
+        }
+
+        @keyframes dropdownSlide {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 10px 16px;
+            font-size: 13px;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all var(--transition-fast);
+        }
+
+        .dropdown-item:hover {
+            background: var(--bg-secondary);
+        }
+
+        .dropdown-item-icon {
+            width: 16px;
+            height: 16px;
+            opacity: 0.8;
+            flex-shrink: 0;
+        }
+
+        .dropdown-separator {
+            height: 1px;
+            background: var(--border-color);
+            margin: 6px 0;
+        }
+
+        .integration-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all var(--transition-normal);
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-github {
+            background: #333;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-github:hover {
+            background: #444;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .btn-huggingface {
+            background: linear-gradient(135deg, #ff9d00 0%, #ffb133 100%);
+            color: #000;
+            box-shadow: 0 2px 8px rgba(255, 157, 0, 0.3);
+        }
+
+        .btn-huggingface:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 157, 0, 0.5);
+        }
+
+        .btn-icon {
+            width: 18px;
+            height: 18px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: width var(--transition-normal);
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(135deg, rgba(45, 45, 48, 0.1) 0%, transparent 100%);
+        }
+
+        .sidebar-header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .sidebar-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            letter-spacing: 0.5px;
+        }
+
+        .project-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent-primary);
+            text-transform: none;
+        }
+
+        .sidebar-actions {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .sidebar-btn {
+            flex: 1;
+            min-width: calc(50% - 4px);
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sidebar-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .sidebar-btn:hover::before {
+            left: 100%;
+        }
+
+        .sidebar-btn:hover {
+            background: var(--bg-secondary);
+            border-color: var(--accent-primary);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+        }
+
+        .sidebar-btn:active {
+            transform: scale(0.98);
+        }
+
+        .file-tree {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+
+        .file-tree::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .file-tree::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        .file-tree::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        .file-tree::-webkit-scrollbar-thumb:hover {
+            background: #4e4e52;
+        }
+
+        .file-item {
+            padding: 6px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            transition: all var(--transition-fast);
+            position: relative;
+        }
+
+        .file-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background: var(--accent-primary);
+            transform: scaleY(0);
+            transition: transform var(--transition-fast);
+        }
+
+        .file-item:hover {
+            background: #2a2d2e;
+        }
+
+        .file-item:hover::before {
+            transform: scaleY(1);
+        }
+
+        .file-item.active {
+            background: linear-gradient(90deg, rgba(102, 126, 234, 0.2) 0%, transparent 100%);
+        }
+
+        .file-item.active::before {
+            transform: scaleY(1);
+        }
+
+        .folder-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .folder-arrow {
+            width: 12px;
+            height: 12px;
+            transition: transform var(--transition-normal);
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        .folder-item.expanded .folder-arrow {
+            transform: rotate(90deg);
+            color: var(--accent-primary);
+        }
+
+        .folder-children {
+            display: none;
+            padding-left: 20px;
+            animation: slideDown var(--transition-normal);
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .folder-children.expanded {
+            display: block;
+        }
+
+        .file-icon {
+            width: 16px;
+            height: 16px;
+            opacity: 0.8;
+            transition: transform var(--transition-fast);
+            flex-shrink: 0;
+        }
+
+        .file-item:hover .file-icon {
+            transform: scale(1.1);
+        }
+
+        .editor-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-primary);
+            position: relative;
+        }
+
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .editor-and-terminal {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .tabs {
+            background: var(--bg-tertiary);
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .tabs::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .tabs::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .tab {
+            padding: 10px 12px 10px 20px;
+            cursor: pointer;
+            border-right: 1px solid var(--border-color);
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all var(--transition-fast);
+            position: relative;
+            min-width: max-content;
+            white-space: nowrap;
+        }
+
+        .tab::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            transform: scaleX(0);
+            transition: transform var(--transition-normal);
+        }
+
+        .tab.active {
+            background: var(--bg-primary);
+        }
+
+        .tab.active::after {
+            transform: scaleX(1);
+        }
+
+        .tab:hover:not(.active) {
+            background: #2a2d2e;
+        }
+
+        .tab-close {
+            width: 18px;
+            height: 18px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all var(--transition-fast);
+            margin-left: 4px;
+            flex-shrink: 0;
+        }
+
+        .tab:hover .tab-close {
+            opacity: 1;
+        }
+
+        .tab-close:hover {
+            background: #f44336;
+            color: #fff;
+        }
+
+        .tab-close svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        .editor {
+            flex: 1;
+            background: var(--bg-primary);
+            padding: 20px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.8;
+            overflow-y: auto;
+        }
+
+        .editor::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        .editor::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        .editor::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 6px;
+        }
+
+        .code-line {
+            display: flex;
+            gap: 20px;
+            transition: background var(--transition-fast);
+            padding: 2px 0;
+            border-radius: 4px;
+        }
+
+        .code-line:hover {
+            background: #2a2d2e;
+        }
+
+        .line-number {
+            color: var(--text-secondary);
+            text-align: right;
+            width: 40px;
+            user-select: none;
+            flex-shrink: 0;
+        }
+
+        .code-content {
+            flex: 1;
+            word-break: break-word;
+        }
+
+        .keyword { color: #569cd6; font-weight: 500; }
+        .string { color: #ce9178; }
+        .function { color: #dcdcaa; }
+        .comment { color: #6a9955; font-style: italic; }
+
+        .terminal-section {
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: 250px;
+            overflow: hidden;
+            min-height: 150px;
+            max-height: 500px;
+        }
+
+        .terminal-section.collapsed {
+            height: 38px;
+            min-height: 38px;
+        }
+
+        .terminal-header {
+            background: var(--bg-secondary);
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+            user-select: none;
+            min-height: 38px;
+            flex-shrink: 0;
+        }
+
+        .terminal-header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .terminal-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .terminal-tabs {
+            display: flex;
+            gap: 2px;
+            margin-left: 12px;
+            overflow-x: auto;
+        }
+
+        .terminal-tab {
+            padding: 4px 10px;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+
+        .terminal-tab:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .terminal-tab.active {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+
+        .terminal-actions {
+            display: flex;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+
+        .terminal-btn {
+            width: 28px;
+            height: 28px;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            transition: all var(--transition-fast);
+        }
+
+        .terminal-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .terminal-content {
+            flex: 1;
+            background: var(--bg-primary);
+            padding: 12px 16px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+
+        .terminal-content.collapsed {
+            display: none;
+        }
+
+        .terminal-line {
+            margin-bottom: 2px;
+            display: flex;
+            gap: 0;
+        }
+
+        .terminal-prompt {
+            color: #4ec9b0;
+            font-weight: 500;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+
+        .terminal-command {
+            color: var(--warning);
+        }
+
+        .terminal-output {
+            color: #cccccc;
+            padding-left: 0;
+        }
+
+        .terminal-error {
+            color: var(--error);
+        }
+
+        .terminal-success {
+            color: var(--success);
+        }
+
+        .terminal-input-line {
+            display: flex;
+            gap: 0;
+            align-items: center;
+        }
+
+        .terminal-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--warning);
+            font-family: inherit;
+            font-size: inherit;
+            outline: none;
+            margin-left: 8px;
+        }
+
+        .terminal-cursor {
+            width: 8px;
+            height: 16px;
+            background: #cccccc;
+            margin-left: 2px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+
+        .resizer {
+            height: 5px;
+            background: var(--bg-secondary);
+            cursor: ns-resize;
+            position: relative;
+            transition: background var(--transition-fast);
+            flex-shrink: 0;
+        }
+
+        .resizer:hover {
+            background: rgba(102, 126, 234, 0.3);
+        }
+
+        .resizer::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 2px;
+            background: var(--border-color);
+            border-radius: 2px;
+        }
+
+        .ai-panel {
+            width: 380px;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .ai-header {
+            padding: 14px 16px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-bottom: 1px solid rgba(102, 126, 234, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+        }
+
+        .ai-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ai-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            animation: float 3s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+
+        .ai-title {
+            font-weight: 600;
+            font-size: 14px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .ai-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .icon-btn {
+            width: 28px;
+            height: 28px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            transition: all var(--transition-fast);
+            flex-shrink: 0;
+        }
+
+        .icon-btn:hover {
+            background: rgba(102, 126, 234, 0.3);
+            color: var(--accent-primary);
+            transform: scale(1.1);
+        }
+
+        .ai-mode-selector {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            gap: 4px;
+            background: var(--bg-tertiary);
+            flex-shrink: 0;
+            overflow-x: auto;
+        }
+
+        .mode-btn {
+            flex: 1;
+            min-width: max-content;
+            padding: 7px 10px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all var(--transition-normal);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-weight: 500;
+            position: relative;
+        }
+
+        .mode-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 6px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            opacity: 0;
+            transition: opacity var(--transition-normal);
+        }
+
+        .mode-btn span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .mode-btn:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transform: translateY(-1px);
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .ai-context {
+            padding: 10px 12px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 11px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .context-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .context-indicator {
+            width: 8px;
+            height: 8px;
+            background: #4caf50;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+            flex-shrink: 0;
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% { 
+                opacity: 0.6;
+                transform: scale(1.2);
+            }
+        }
+
+        .ai-chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .ai-chat::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .ai-chat::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        .ai-chat::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        .ai-message {
+            background: var(--bg-tertiary);
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            line-height: 1.6;
+            animation: messageSlide var(--transition-normal);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .ai-message.user {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            align-self: flex-end;
+            max-width: 80%;
+        }
+
+        .message-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+
+        .msg-action-btn {
+            padding: 5px 12px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .msg-action-btn:hover {
+            background: rgba(102, 126, 234, 0.3);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            transform: translateY(-1px);
+        }
+
+        .ai-input-wrapper {
+            padding: 12px;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+            flex-shrink: 0;
+        }
+
+        .ai-input-tools {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 8px;
+            overflow-x: auto;
+        }
+
+        .input-tool {
+            padding: 6px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            color: var(--text-secondary);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .input-tool:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            transform: translateY(-1px);
+        }
+
+        .ai-input-container {
+            position: relative;
+        }
+
+        .ai-input {
+            width: 100%;
+            padding: 12px 44px 12px 12px;
+            background: #3c3c3c;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: inherit;
+            resize: none;
+            min-height: 40px;
+            max-height: 120px;
+            transition: all var(--transition-fast);
+        }
+
+        .ai-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .ai-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            background: #404040;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .send-btn {
+            position: absolute;
+            right: 6px;
+            bottom: 6px;
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            transition: all var(--transition-normal);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
+        }
+
+        .send-btn:active {
+            transform: scale(0.95);
+        }
+
+        .status-bar {
+            background: linear-gradient(135deg, #007acc, #005a9e);
+            padding: 5px 16px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2);
+            flex-shrink: 0;
+        }
+
+        .status-left, .status-right {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all var(--transition-fast);
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .status-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .context-menu {
+            position: fixed;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            padding: 6px 0;
+            min-width: 200px;
+            z-index: 2000;
+            display: none;
+            animation: contextMenuSlide var(--transition-fast);
+        }
+
+        @keyframes contextMenuSlide {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .context-menu.show {
+            display: block;
+        }
+
+        .context-menu-item {
+            padding: 10px 16px;
+            font-size: 13px;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all var(--transition-fast);
+        }
+
+        .context-menu-item:hover {
+            background: var(--bg-secondary);
+        }
+
+        .context-menu-item.danger:hover {
+            background: #f44336;
+            color: #fff;
+        }
+
+        .context-menu-separator {
+            height: 1px;
+            background: var(--border-color);
+            margin: 6px 0;
+        }
+
+        .context-menu-icon {
+            width: 16px;
+            height: 16px;
+            opacity: 0.8;
+            flex-shrink: 0;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            width: 600px;
+            max-height: 600px;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 18px;
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all var(--transition-fast);
+        }
+
+        .modal-close:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 16px;
+            overflow-y: auto;
+            max-height: 450px;
+        }
+
+        .extension-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 12px;
+            transition: all var(--transition-fast);
+        }
+
+        .extension-item:hover {
+            background: var(--bg-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .extension-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .extension-status {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+
+        .extension-status.disabled {
+            background: var(--error);
+        }
+
+        .extension-details {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .extension-name {
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .extension-version {
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .extension-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .extension-btn {
+            padding: 6px 12px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all var(--transition-fast);
+        }
+
+        .extension-btn:hover {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: white;
+        }
+
+        .extension-btn.danger:hover {
+            background: var(--error);
+            border-color: var(--error);
+        }
+
+        .extension-btn.install {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: white;
+        }
+
+        .extension-btn.install:hover {
+            background: var(--accent-secondary);
+            border-color: var(--accent-secondary);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: var(--accent-primary);
+            border-radius: 50%;
+            animation: loading 1.4s infinite;
+        }
+
+        @keyframes loading {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 200px;
+            }
+
+            .ai-panel {
+                width: 320px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            .ai-panel {
+                display: none;
+            }
+
+            .integration-buttons {
+                gap: 5px;
+            }
+
+            .btn {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+
+            .terminal-section {
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="top-bar">
+            <div class="top-bar-left">
+                <div class="logo">
+                    <div class="logo-icon">AP</div>
+                    <span>AutoPilot IDE</span>
+                </div>
+                <div class="menu-tabs">
+                    <div class="menu-tab-wrapper">
+                        <button class="menu-tab" onclick="toggleDropdown('windowMenu', event)">Window</button>
+                        <div class="dropdown-menu" id="windowMenu">
+                            <div class="dropdown-item">
+                                <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                                </svg>
+                                Explorer ✓
+                            </div>
+                            <div class="dropdown-item">
+                                <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                                </svg>
+                                Editor ✓
+                            </div>
+                            <div class="dropdown-item">
+                                <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+                                </svg>
+                                Terminal ✓
+                            </div>
+                            <div class="dropdown-item">
+                                <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                AI Assistant ✓
+                            </div>
+                        </div>
+                    </div>
+                    <div class="menu-tab-wrapper">
+                        <button class="menu-tab" onclick="toggleDropdown('themeMenu', event)">Theme</button>
+                        <div class="dropdown-menu" id="themeMenu">
+                            <div class="dropdown-item">
+                                <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                                </svg>
+                                Dark
+                            </div>
+                            <div class="dropdown-item">
+                                <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                                </svg>
+                                Light
+                            </div>
+                            <div class="dropdown-separator"></div>
+                            <div class="dropdown-item">
+                                <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                Open Theme Directory
+                            </div>
+                        </div>
+                    </div>
+                    <div class="menu-tab-wrapper">
+                        <button class="menu-tab" onclick="toggleDropdown('extensionsMenu', event)">Extensions</button>
+                        <div class="dropdown-menu" id="extensionsMenu">
+                            <div class="dropdown-item" onclick="openGetExtensions()">
+                                <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 5v14M5 12h14"/>
+                                </svg>
+                                Get Extensions
+                            </div>
+                            <div class="dropdown-item" onclick="openManageExtensions()">
+                                <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+                                </svg>
+                                Manage Extensions
+                            </div>
+                            <div class="dropdown-item" onclick="openExtensionDirectory()">
+                                <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                Open Extension Directory
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="integration-buttons">
+                <button class="btn btn-github">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                    <span>GitHub</span>
+                </button>
+                <button class="btn btn-huggingface">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 3C7.58 3 4 6.58 4 11c0 2.97 1.64 5.55 4.06 6.93.3.55.94 1.07 1.94 1.07s1.64-.52 1.94-1.07C14.36 16.55 16 13.97 16 11c0-4.42-3.58-8-8-8zm0 2c3.31 0 6 2.69 6 6 0 2.22-1.21 4.15-3 5.19V13c0-1.1-.9-2-2-2h-2c-1.1 0-2 .9-2 2v3.19c-1.79-1.04-3-2.97-3-5.19 0-3.31 2.69-6 6-6zm-1 8h2v4h-2v-4z"/>
+                    </svg>
+                    <span>Hugging Face</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <div class="sidebar-header-left">
+                        <div class="sidebar-title">Explorer</div>
+                        <div class="project-name">AutoPilot-Project</div>
+                    </div>
+                </div>
+                <div class="sidebar-actions">
+                <button class="sidebar-btn" onclick="openProjectModal()" title="Open Project">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z"/>
+                    </svg>
+                </button>
+                    <button class="sidebar-btn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        Select Project
+                    </button>
+                    <button class="sidebar-btn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                        </svg>
+                        Regen Full Context
+                    </button>
+                    <button class="sidebar-btn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M1 12h6m6 0h6"/>
+                        </svg>
+                        Configure
+                    </button>
+                </div>
+                <div class="file-tree" id="fileTree">
+                    <div class="file-item active">
+                        <span class="file-icon">📄</span>
+                        <span>main.py</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="editor-area">
+                <div class="editor-and-terminal">
+                    <div class="editor-container">
+                        <div class="tabs">
+                            <div class="tab active">
+                                <span class="file-icon">📄</span>
+                                <span>app.py</span>
+                                <div class="tab-close" onclick="event.stopPropagation();">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M18 6L6 18M6 6l12 12"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="editor" id="editor">
+                            <div class="code-line">
+                                <span class="line-number">1</span>
+                                <span class="code-content"><span class="keyword">from</span> flask <span class="keyword">import</span> Flask, jsonify</span>
+                            </div>
+                            <div class="code-line">
+                                <span class="line-number">2</span>
+                                <span class="code-content"><span class="keyword">from</span> flask_socketio <span class="keyword">import</span> SocketIO</span>
+                            </div>
+                            <div class="code-line">
+                                <span class="line-number">3</span>
+                                <span class="code-content"></span>
+                            </div>
+                            <div class="code-line">
+                                <span class="line-number">4</span>
+                                <span class="code-content">app = Flask(__name__)</span>
+                            </div>
+                            <div class="code-line">
+                                <span class="line-number">5</span>
+                                <span class="code-content">socketio = SocketIO(app, cors_allowed_origins=<span class="string">"*"</span>)</span>
+                            </div>
+                            <div class="code-line">
+                                <span class="line-number">6</span>
+                                <span class="code-content"></span>
+                            </div>
+                            <div class="code-line">
+                                <span class="line-number">7</span>
+                                <span class="code-content"><span class="comment"># Backend running with Python + Flask</span></span>
+                            </div>
+                            <div class="code-line">
+                                <span class="line-number">8</span>
+                                <span class="code-content"><span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:</span>
+                            </div>
+                            <div class="code-line">
+                                <span class="line-number">9</span>
+                                <span class="code-content">    socketio.run(app, debug=<span class="keyword">True</span>)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="resizer" id="terminalResizer"></div>
+                    <div class="terminal-section" id="terminalSection">
+                        <div class="terminal-header">
+                            <div class="terminal-header-left">
+                                <span class="terminal-title">Terminal</span>
+                                <div class="terminal-tabs">
+                                    <button class="terminal-tab active"><span>bash</span></button>
+                                    <button class="terminal-tab"><span>python</span></button>
+                                    <button class="terminal-tab"><span>+</span></button>
+                                </div>
+                            </div>
+                            <div class="terminal-actions">
+                                <button class="terminal-btn" title="Split Terminal">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="3" x2="12" y2="21"/>
+                                    </svg>
+                                </button>
+                                <button class="terminal-btn" title="Clear Terminal">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                </button>
+                                <button class="terminal-btn" id="toggleTerminalBtn" title="Collapse Terminal">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="18 15 12 9 6 15"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="terminal-content" id="terminalContent">
+                            <div class="terminal-line">
+                                <span class="terminal-prompt">user@autopilot:~/project$</span>
+                                <span class="terminal-command">python app.py</span>
+                            </div>
+                            <div class="terminal-line">
+                                <span class="terminal-output">* Running on http://127.0.0.1:5000</span>
+                            </div>
+                            <div class="terminal-line">
+                                <span class="terminal-success">✓ Backend connected</span>
+                            </div>
+                            <div class="terminal-line">
+                                <span class="terminal-output">&nbsp;</span>
+                            </div>
+                            <div class="terminal-input-line">
+                                <span class="terminal-prompt">user@autopilot:~/project$</span>
+                                <input type="text" class="terminal-input" id="terminalInput" />
+                                <span class="terminal-cursor"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ai-panel">
+                <div class="ai-header">
+                    <div class="ai-header-left">
+                        <div class="ai-icon">✨</div>
+                        <span class="ai-title">AI Assistant</span>
+                    </div>
+                    <div class="ai-actions">
+                        <button class="icon-btn" title="New Chat">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                        </button>
+                        <button class="icon-btn" title="Settings">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M1 12h6m6 0h6"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="ai-mode-selector">
+                    <button class="mode-btn active"><span>💬 Chat</span></button>
+                    <button class="mode-btn"><span>🔍 Explain</span></button>
+                    <button class="mode-btn"><span>🐛 Debug</span></button>
+                    <button class="mode-btn"><span>✨ Refactor</span></button>
+                </div>
+
+                <div class="ai-context">
+                    <div class="context-left">
+                        <div class="context-indicator"></div>
+                        <span>Backend Connected</span>
+                    </div>
+                    <span style="color: var(--accent-primary); cursor: pointer;">⚙️</span>
+                </div>
+
+                <div class="ai-chat" id="aiChat">
+                    <div class="ai-message">
+                        👋 Hello! I'm your AI coding assistant. Backend is now running with Python + Flask. What would you like to work on?
+                    </div>
+                </div>
+                
+                <div class="ai-input-wrapper">
+                    <div class="ai-input-tools">
+                        <button class="input-tool" title="Attach File">📎</button>
+                        <button class="input-tool" title="Add Context">🎯</button>
+                        <button class="input-tool" title="Voice Input">🎤</button>
+                    </div>
+                    <div class="ai-input-container">
+                        <textarea class="ai-input" id="aiInput" placeholder="Ask AI anything..." rows="1"></textarea>
+                        <button class="send-btn" id="sendBtn" title="Send">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-left">
+                <div class="status-item">🌐 Backend Connected</div>
+                <div class="status-item">🐍 Python 3.10</div>
+            </div>
+            <div class="status-right">
+                <div class="status-item">Flask + SocketIO</div>
+                <div class="status-item">UTF-8</div>
+                <div class="status-item">Ln 9, Col 10</div>
+            </div>
+        </div>
+
+        <div class="context-menu" id="contextMenu"></div>
+    </div>
+
+    <div class="modal" id="manageExtensionsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Manage Extensions</h2>
+                <button class="modal-close" onclick="closeManageExtensions()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="extensionsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="getExtensionsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Get Extensions</h2>
+                <button class="modal-close" onclick="closeGetExtensions()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="availableExtensionsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        let socket = null;
+        let installedExtensions = [];
+        let availableExtensions = [];
+
+        function initSocket() {
+            socket = io('http://localhost:5000', {
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                reconnectionAttempts: 5
+            });
+
+            socket.on('connect', () => {
+                console.log('Connected to backend');
+                addTerminalOutput('✓ Connected to backend', 'success');
+            });
+
+            socket.on('disconnect', () => {
+                console.log('Disconnected from backend');
+                addTerminalOutput('✗ Disconnected from backend', 'error');
+            });
+
+            socket.on('terminal_output', (data) => {
+                if (data.stdout) addTerminalOutput(data.stdout, 'output');
+                if (data.stderr) addTerminalOutput(data.stderr, 'error');
+            });
+
+            socket.on('ai_response', (data) => {
+                addAIMessage(data.message, false);
+            });
+        }
+
+        function addTerminalOutput(text, type = 'output') {
+            const content = document.getElementById('terminalContent');
+            const line = document.createElement('div');
+            line.className = 'terminal-line';
+            
+            const span = document.createElement('span');
+            span.className = `terminal-${type}`;
+            span.textContent = text;
+            
+            line.appendChild(span);
+            content.insertBefore(line, content.lastElementChild);
+            content.scrollTop = content.scrollHeight;
+        }
+
+        function addAIMessage(message, isUser = false) {
+            const chat = document.getElementById('aiChat');
+            const msg = document.createElement('div');
+            msg.className = `ai-message ${isUser ? 'user' : ''}`;
+            msg.textContent = message;
+            chat.appendChild(msg);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        async function fetchExtensions() {
+            try {
+                const response = await fetch(`${API_BASE}/extensions`);
+                const data = await response.json();
+                installedExtensions = data.installed || [];
+                availableExtensions = data.available || [];
+            } catch (error) {
+                console.error('Error fetching extensions:', error);
+            }
+        }
+
+        function openManageExtensions() {
+            const modal = document.getElementById('manageExtensionsModal');
+            const list = document.getElementById('extensionsList');
+            
+            list.innerHTML = '';
+            
+            installedExtensions.forEach(ext => {
+                const item = document.createElement('div');
+                item.className = 'extension-item';
+                item.innerHTML = `
+                    <div class="extension-info">
+                        <div class="extension-status ${ext.enabled ? '' : 'disabled'}"></div>
+                        <div class="extension-details">
+                            <div class="extension-name">${ext.name}</div>
+                            <div class="extension-version">v${ext.version} • ${ext.enabled ? 'Enabled' : 'Disabled'}</div>
+                        </div>
+                    </div>
+                    <div class="extension-actions">
+                        <button class="extension-btn" onclick="toggleExtensionAPI(${ext.id})">
+                            ${ext.enabled ? 'Disable' : 'Enable'}
+                        </button>
+                        <button class="extension-btn danger" onclick="uninstallExtensionAPI(${ext.id})">
+                            Uninstall
+                        </button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+            
+            modal.classList.add('show');
+        }
+
+        function closeManageExtensions() {
+            document.getElementById('manageExtensionsModal').classList.remove('show');
+        }
+
+        function openGetExtensions() {
+            const modal = document.getElementById('getExtensionsModal');
+            const list = document.getElementById('availableExtensionsList');
+            
+            list.innerHTML = '';
+            
+            const notInstalled = availableExtensions.filter(
+                avail => !installedExtensions.some(inst => inst.id === avail.id)
+            );
+            
+            if (notInstalled.length === 0) {
+                list.innerHTML = '<div style="color: var(--text-secondary); text-align: center; padding: 20px;">All available extensions are already installed!</div>';
+            } else {
+                notInstalled.forEach(ext => {
+                    const item = document.createElement('div');
+                    item.className = 'extension-item';
+                    item.innerHTML = `
+                        <div class="extension-info">
+                            <div class="extension-details">
+                                <div class="extension-name">${ext.name}</div>
+                                <div class="extension-version">v${ext.version} • ${ext.description}</div>
+                            </div>
+                        </div>
+                        <div class="extension-actions">
+                            <button class="extension-btn install" onclick="installExtensionAPI(${ext.id})">
+                                Install
+                            </button>
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+            }
+            
+            modal.classList.add('show');
+        }
+
+        function closeGetExtensions() {
+            document.getElementById('getExtensionsModal').classList.remove('show');
+        }
+
+        async function toggleExtensionAPI(extId) {
+            try {
+                await fetch(`${API_BASE}/extensions/${extId}/toggle`, { method: 'POST' });
+                await fetchExtensions();
+                openManageExtensions();
+            } catch (error) {
+                console.error('Error toggling extension:', error);
+            }
+        }
+
+        async function installExtensionAPI(extId) {
+            try {
+                await fetch(`${API_BASE}/extensions/${extId}/install`, { method: 'POST' });
+                await fetchExtensions();
+                openGetExtensions();
+            } catch (error) {
+                console.error('Error installing extension:', error);
+            }
+        }
+
+        async function uninstallExtensionAPI(extId) {
+            try {
+                await fetch(`${API_BASE}/extensions/${extId}/uninstall`, { method: 'POST' });
+                await fetchExtensions();
+                openManageExtensions();
+            } catch (error) {
+                console.error('Error uninstalling extension:', error);
+            }
+        }
+
+        function openExtensionDirectory() {
+            console.log('Opening extension directory...');
+        }
+
+        let currentDropdown = null;
+
+        function toggleDropdown(menuId, event) {
+            event.stopPropagation();
+            const menu = document.getElementById(menuId);
+            
+            if (currentDropdown === menu && menu.classList.contains('show')) {
+                menu.classList.remove('show');
+                currentDropdown = null;
+                return;
+            }
+            
+            if (currentDropdown) {
+                currentDropdown.classList.remove('show');
+            }
+            
+            menu.classList.add('show');
+            currentDropdown = menu;
+        }
+
+        document.addEventListener('click', function(e) {
+            if (currentDropdown && !e.target.closest('.menu-tab-wrapper')) {
+                currentDropdown.classList.remove('show');
+                currentDropdown = null;
+            }
+        });
+
+        const toggleTerminalBtn = document.getElementById('toggleTerminalBtn');
+        
+        toggleTerminalBtn.addEventListener('click', function() {
+            const terminal = document.getElementById('terminalSection');
+            const content = document.getElementById('terminalContent');
+            
+            terminal.classList.toggle('collapsed');
+            content.classList.toggle('collapsed');
+            
+            const svg = this.querySelector('svg polyline');
+            if (terminal.classList.contains('collapsed')) {
+                svg.setAttribute('points', '6 9 12 15 18 9');
+            } else {
+                svg.setAttribute('points', '18 15 12 9 6 15');
+            }
+        });
+
+        const terminalResizer = document.getElementById('terminalResizer');
+        const terminalSection = document.getElementById('terminalSection');
+        let isResizing = false;
+
+        terminalResizer.addEventListener('mousedown', function(e) {
+            isResizing = true;
+            document.body.style.cursor = 'ns-resize';
+            document.body.style.userSelect = 'none';
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!isResizing) return;
+            
+            const containerRect = terminalSection.parentElement.getBoundingClientRect();
+            const newHeight = containerRect.bottom - e.clientY;
+            
+            if (newHeight >= 150 && newHeight <= 500) {
+                terminalSection.style.height = newHeight + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', function() {
+            isResizing = false;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        });
+
+        const textarea = document.querySelector('.ai-input');
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        document.getElementById('sendBtn').addEventListener('click', function() {
+            const input = document.getElementById('aiInput');
+            const message = input.value.trim();
+            if (message) {
+                addAIMessage(message, true);
+                if (socket) {
+                    socket.emit('ai_message', {
+                        message: message,
+                        mode: document.querySelector('.mode-btn.active').textContent.trim()
+                    });
+                }
+                input.value = '';
+                input.style.height = 'auto';
+            }
+        });
+
+        document.getElementById('aiInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                document.getElementById('sendBtn').click();
+            }
+        });
+
+        document.getElementById('terminalInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const command = this.value.trim();
+                if (command && socket) {
+                    addTerminalOutput(`user@autopilot:~/project$ ${command}`, 'command');
+                    socket.emit('terminal_execute', {
+                        command: command
+                    });
+                    this.value = '';
+                }
+            }
+        });
+
+        window.addEventListener('click', function(event) {
+            const manageModal = document.getElementById('manageExtensionsModal');
+            const getModal = document.getElementById('getExtensionsModal');
+            
+            if (event.target === manageModal) {
+                manageModal.classList.remove('show');
+            }
+            if (event.target === getModal) {
+                getModal.classList.remove('show');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initSocket();
+            fetchExtensions();
+        });
+    </script>
+    <script>
+    // Tree View Functionality
+    document.addEventListener("DOMContentLoaded", function() {
+        // Initialize file tree with click handlers
+        const fileTree = document.getElementById("fileTree");
+        if (fileTree) {
+            const fileItems = fileTree.querySelectorAll(".file-item");
+            fileItems.forEach(item => {
+                item.addEventListener("click", function(e) {
+                    e.stopPropagation();
+                    fileItems.forEach(i => i.classList.remove("active"));
+                    this.classList.add("active");
+                    const fileName = this.textContent.trim();
+                    console.log("[TreeView] Selected file:", fileName);
+                    const editorTabs = document.querySelector(".tabs");
+                    if (editorTabs) {
+                        const existingTab = editorTabs.querySelector(".tab");
+                        if (existingTab) {
+                            existingTab.textContent = fileName;
+                        }
+                    }
+                });
+            });
+        }
+    });
+    </script>
+
+    <!-- Project Opener Modal -->
+    <div id="projectModal" class="modal">
+        <div class="modal-content project-modal">
+            <div class="modal-header">
+                <h2>Open Project</h2>
+                <button class="modal-close" onclick="closeProjectModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="project-tabs">
+                    <button class="project-tab active" onclick="switchProjectTab('recent')">Recent Projects</button>
+                    <button class="project-tab" onclick="switchProjectTab('browse')">Browse</button>
+                    <button class="project-tab" onclick="switchProjectTab('create')">Create New</button>
+                </div>
+                
+                <!-- Recent Projects Tab -->
+                <div id="recentTab" class="project-tab-content active">
+                    <div class="recent-projects-list">
+                        <!-- Populated by ProjectManager -->
+                    </div>
+                </div>
+                
+                <!-- Browse Tab -->
+                <div id="browseTab" class="project-tab-content">
+                    <div class="browse-section">
+                        <input type="text" id="projectPath" placeholder="Enter project path..." class="project-path-input">
+                        <button class="btn-primary" onclick="browseProjects()">Browse Folder</button>
+                    </div>
+                    <div class="browse-results" id="browseResults"></div>
+                </div>
+                
+                <!-- Create New Tab -->
+                <div id="createTab" class="project-tab-content">
+                    <div class="create-section">
+                        <div class="form-group">
+                            <label>Project Name</label>
+                            <input type="text" id="newProjectName" placeholder="My New Project" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label>Project Type</label>
+                            <select id="projectType" class="form-input">
+                                <option>Python</option>
+                                <option>JavaScript</option>
+                                <option>Web App</option>
+                                <option>Empty</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Location</label>
+                            <input type="text" id="projectLocation" placeholder="/home/user/projects" class="form-input">
+                        </div>
+                        <button class="btn-primary" onclick="createNewProject()">Create Project</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .modal.show {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .modal-content {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .project-modal {
+        max-width: 700px;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .modal-header h2 {
+        margin: 0;
+        font-size: 18px;
+        color: var(--text-primary);
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 28px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+    }
+
+    .modal-body {
+        padding: 20px;
+    }
+
+    .project-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .project-tab {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        padding: 12px 16px;
+        cursor: pointer;
+        font-size: 14px;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+        position: relative;
+        bottom: -1px;
+    }
+
+    .project-tab:hover {
+        color: var(--text-primary);
+    }
+
+    .project-tab.active {
+        color: var(--accent-primary);
+        border-bottom-color: var(--accent-primary);
+    }
+
+    .project-tab-content {
+        display: none;
+    }
+
+    .project-tab-content.active {
+        display: block;
+    }
+
+    .recent-projects-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .project-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .project-item:hover {
+        background: #3a3d40;
+        border-color: var(--accent-primary);
+        transform: translateX(4px);
+    }
+
+    .project-icon {
+        font-size: 24px;
+        flex-shrink: 0;
+    }
+
+    .project-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .project-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+    }
+
+    .project-path {
+        font-size: 12px;
+        color: var(--text-secondary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        margin-bottom: 2px;
+    }
+
+    .project-date {
+        font-size: 11px;
+        color: #888;
+    }
+
+    .project-arrow {
+        color: var(--text-secondary);
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+
+    .browse-section {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .project-path-input {
+        flex: 1;
+        padding: 8px 12px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        color: var(--text-primary);
+        font-size: 13px;
+    }
+
+    .project-path-input:focus {
+        outline: none;
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+    }
+
+    .browse-results {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .create-section {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .form-group label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .form-input {
+        padding: 8px 12px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        color: var(--text-primary);
+        font-size: 13px;
+        font-family: inherit;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+    }
+
+    .btn-primary {
+        padding: 10px 16px;
+        background: var(--accent-primary);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+        background: #5a6ee8;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-primary:active {
+        transform: translateY(0);
+    }
+    </style>
+
+    <script>
+    // This script contains the fixed project system functions
+
+function initializeProjectSystem() {
+    console.log('[ProjectSystem] Initializing project system...');
+    
+    // Load project manager
+    if (typeof projectManager !== 'undefined') {
+        updateRecentProjectsList();
+        updateCurrentProjectDisplay();
+        console.log('[ProjectSystem] Project system initialized successfully');
+    } else {
+        console.error('[ProjectSystem] ProjectManager not loaded');
+    }
+}
+
+function updateRecentProjectsList() {
+    const recentList = document.querySelector('.recent-projects-list');
+    if (!recentList) return;
+    
+    const recentProjects = projectManager.getRecentProjects(10);
+    
+    recentList.innerHTML = recentProjects.map(project => `
+        <div class="project-item" data-project-id="${project.id}">
+            <div class="project-icon">📁</div>
+            <div class="project-info">
+                <div class="project-title">${project.name}</div>
+                <div class="project-path">${project.path}</div>
+                <div class="project-date">${projectManager.formatDate(project.lastOpened)}</div>
+            </div>
+            <div class="project-arrow">→</div>
+        </div>
+    `).join('');
+    
+    // Add click handlers to project items
+    document.querySelectorAll('.project-item[data-project-id]').forEach(item => {
+        item.addEventListener('click', function() {
+            const projectId = this.getAttribute('data-project-id');
+            openProject(projectId);
+        });
+    });
+    
+    console.log('[ProjectSystem] Updated recent projects list');
+}
+
+function updateCurrentProjectDisplay() {
+    const currentProject = projectManager.getCurrentProject();
+    if (!currentProject) return;
+    
+    // Update project name in sidebar
+    const projectNameEl = document.querySelector('.project-name');
+    if (projectNameEl) {
+        projectNameEl.textContent = currentProject.name;
+    }
+    
+    // Update file tree
+    updateFileTree(currentProject);
+    
+    console.log('[ProjectSystem] Updated current project display:', currentProject.name);
+}
+
+function updateFileTree(project) {
+    const fileTree = document.getElementById('fileTree');
+    if (!fileTree) return;
+    
+    if (!project.files || project.files.length === 0) {
+        fileTree.innerHTML = '<div class="empty-state">No files in project</div>';
+        return;
+    }
+    
+    fileTree.innerHTML = project.files.map(file => `
+        <div class="file-item" onclick="selectFile(this, '${file.name}')">
+            <span class="file-icon">${file.icon}</span>
+            <span>${file.name}</span>
+        </div>
+    `).join('');
+    
+    console.log('[ProjectSystem] Updated file tree with', project.files.length, 'files');
+}
+
+function openProjectModal() {
+    const modal = document.getElementById('projectModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        updateRecentProjectsList();
+        console.log('[ProjectSystem] Opened project modal');
+    }
+}
+
+function closeProjectModal() {
+    const modal = document.getElementById('projectModal');
+    if (modal) {
+        modal.style.display = 'none';
+        console.log('[ProjectSystem] Closed project modal');
+    }
+}
+
+function switchProjectTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.project-tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Show selected tab
+    const selectedTab = document.getElementById(tabName + 'Tab');
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+    
+    // Update tab buttons
+    document.querySelectorAll('.project-tab').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    console.log('[ProjectSystem] Switched to tab:', tabName);
+}
+
+function openProject(projectId) {
+    console.log('[ProjectSystem] Opening project:', projectId);
+    
+    if (projectManager.setCurrentProject(projectId)) {
+        updateCurrentProjectDisplay();
+        closeProjectModal();
+        console.log('[ProjectSystem] Project opened successfully');
+    } else {
+        console.error('[ProjectSystem] Failed to open project:', projectId);
+    }
+}
+
+function selectFile(element, fileName) {
+    // Remove active class from all files
+    document.querySelectorAll('.file-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    // Add active class to selected file
+    element.classList.add('active');
+    
+    // Update editor tab
+    const editorTabs = document.querySelector('.tabs');
+    if (editorTabs) {
+        const existingTab = editorTabs.querySelector('.tab');
+        if (existingTab) {
+            existingTab.innerHTML = `
+                <span class="file-icon">📄</span>
+                <span>${fileName}</span>
+                <div class="tab-close" onclick="event.stopPropagation();">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </div>
+            `;
+        }
+    }
+    
+    console.log('[ProjectSystem] Selected file:', fileName);
+}
+
+function browseProjects() {
+    console.log('[ProjectSystem] Browse projects clicked');
+    const pathInput = document.getElementById('projectPath');
+    if (pathInput) {
+        pathInput.focus();
+    }
+}
+
+function createNewProject() {
+    const name = document.getElementById('newProjectName').value;
+    const type = document.getElementById('projectType').value;
+    const location = document.getElementById('projectLocation').value;
+    
+    if (!name || name.trim() === '') {
+        alert('Please enter a project name');
+        return;
+    }
+    
+    try {
+        const project = projectManager.createProject(
+            name.trim(),
+            type,
+            location || undefined
+        );
+        
+        console.log('[ProjectSystem] Project created:', project.name);
+        
+        // Clear form
+        document.getElementById('newProjectName').value = '';
+        document.getElementById('projectLocation').value = '';
+        
+        // Update display
+        updateCurrentProjectDisplay();
+        updateRecentProjectsList();
+        closeProjectModal();
+        
+        alert(`Project "${name}" created successfully!`);
+    } catch (error) {
+        console.error('[ProjectSystem] Error creating project:', error);
+        alert('Error creating project: ' + error.message);
+    }
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeProjectSystem);
+} else {
+    initializeProjectSystem();
+}
+    </script>
+
+    <script src="js/project-manager.js"></script>
+    <script>
+        // Initialize project system when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof projectManager !== 'undefined') {
+                console.log('[Init] ProjectManager loaded successfully');
+                initializeProjectSystem();
+            } else {
+                console.error('[Init] ProjectManager failed to load');
+            }
+        });
+    </script>
+</body>
+</html>
