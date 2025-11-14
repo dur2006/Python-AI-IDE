@@ -3,9 +3,10 @@ AutoPilot IDE - Application Factory
 Creates and configures the Flask application with all extensions
 """
 
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_socketio import SocketIO
 from flask_cors import CORS
+from pathlib import Path
 
 from backend.config import get_config
 from backend.api import register_blueprints
@@ -55,9 +56,12 @@ def create_app(config_name: str = None) -> Flask:
     Returns:
         Configured Flask application
     """
+    # Get the base directory (project root)
+    base_dir = Path(__file__).parent.parent
+    
     app = Flask(__name__, 
-                static_folder='../static',
-                template_folder='../templates')
+                static_folder=str(base_dir),
+                static_url_path='')
     
     # Load configuration
     config = get_config(config_name)
@@ -89,6 +93,9 @@ def create_app(config_name: str = None) -> Flask:
     # Register AppData socket handlers
     register_appdata_socket_handlers(socketio, app)
     
+    # Register static file routes
+    register_static_routes(app, base_dir)
+    
     # Register error handlers
     register_error_handlers(app)
     
@@ -97,6 +104,22 @@ def create_app(config_name: str = None) -> Flask:
     app.logger.info(f"   Environment: {config_name or 'development'}")
     
     return app
+
+
+def register_static_routes(app: Flask, base_dir: Path):
+    """Register routes for serving static files and index.html"""
+    
+    @app.route('/')
+    def serve_index():
+        """Serve the main index.html file"""
+        return send_from_directory(str(base_dir), 'index.html')
+    
+    @app.route('/<path:filename>')
+    def serve_static_files(filename):
+        """Serve static files (JS, CSS, images, etc.)"""
+        return send_from_directory(str(base_dir), filename)
+    
+    app.logger.info(f"Static files served from: {base_dir}")
 
 
 def register_appdata_socket_handlers(socketio: SocketIO, app: Flask):
