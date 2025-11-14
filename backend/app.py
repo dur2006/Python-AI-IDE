@@ -72,11 +72,13 @@ def create_app(config_name='development'):
     # Setup logging
     setup_logging(app)
     app.logger.info(f"Starting application in {config_name} mode")
-    app.logger.info(f"SocketIO async mode: {socketio.async_mode}")
     
     # Initialize extensions
     CORS(app)
     socketio.init_app(app)
+    
+    # Log async mode AFTER init_app
+    app.logger.info(f"SocketIO async mode: {socketio.async_mode}")
     
     # Initialize AppData Manager
     with app.app_context():
