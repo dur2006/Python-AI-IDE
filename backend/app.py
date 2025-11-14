@@ -1,191 +1,95 @@
 """
-AutoPilot IDE - Application Factory
-Creates and configures the Flask application with all extensions
+Flask Application Factory
+Creates and configures the Flask application with all necessary components
 """
 
+import os
+from pathlib import Path
 from flask import Flask, send_from_directory
 from flask_socketio import SocketIO
 from flask_cors import CORS
-from pathlib import Path
 
-from backend.config import get_config
-from backend.api import register_blueprints
-from backend.socket_handlers import register_socket_handlers
+from backend.config import config
 from backend.utils.logger import setup_logging
+from backend.services.appdata_manager import get_appdata_manager
+
+# Initialize SocketIO
+socketio = SocketIO(cors_allowed_origins="*")
 
 
-# Global SocketIO instance
-socketio = SocketIO()
-
-
-def _initialize_appdata(app: Flask):
-    """Initialize AppData Manager with default data"""
+def _initialize_appdata(app):
+    """Initialize AppData Manager and verify data integrity"""
     try:
-        from backend.services.appdata_manager import get_appdata_manager
-        
         app.logger.info("Initializing AppData Manager...")
+        
+        # Get AppData Manager instance
         appdata = get_appdata_manager()
         
-        # Initialize data files
-        success = appdata.initialize()
+        # Log initialization success
+        app.logger.info("[OK] AppData Manager initialized successfully")
+        app.logger.info(f"   - Data directory: {appdata.data_dir}")
+        app.logger.info(f"   - Projects: {len(appdata.get_projects())}")
+        app.logger.info(f"   - Themes: {len(appdata.get_themes())}")
+        app.logger.info(f"   - Extensions: {len(appdata.get_extensions())}")
+        app.logger.info(f"   - Layouts: {len(appdata.get_layouts())}")
+        app.logger.info(f"   - Settings: {len(appdata.get_settings())}")
         
-        if success:
-            status = appdata.get_status()
-            app.logger.info("✅ AppData Manager initialized successfully")
-            app.logger.info(f"   - Data directory: {status['dataDir']}")
-            app.logger.info(f"   - Projects: {status['projects']}")
-            app.logger.info(f"   - Themes: {status['themes']}")
-            app.logger.info(f"   - Extensions: {status['extensions']}")
-            app.logger.info(f"   - Layouts: {status['layouts']}")
-            app.logger.info(f"   - Settings: {status['settings']}")
-        else:
-            app.logger.error("❌ AppData Manager initialization failed")
-            
     except Exception as e:
-        app.logger.error(f"❌ Error initializing AppData Manager: {e}")
+        app.logger.error(f"Failed to initialize AppData Manager: {e}")
+        raise
 
 
-def create_app(config_name: str = None) -> Flask:
+def create_app(config_name='development'):
     """
-    Application factory pattern
-    Creates and configures the Flask application
+    Application factory function
     
     Args:
-        config_name: Configuration environment name
-        
+        config_name: Configuration environment (development, production, testing)
+    
     Returns:
-        Configured Flask application
+        Flask application instance
     """
-    # Get the base directory (project root)
+    # Determine base directory (project root)
     base_dir = Path(__file__).parent.parent
     
+    # Create Flask app with static folder pointing to project root
     app = Flask(__name__, 
                 static_folder=str(base_dir),
                 static_url_path='')
     
     # Load configuration
-    config = get_config(config_name)
-    app.config.from_object(config)
-    config.init_app(app)
+    app.config.from_object(config[config_name])
     
     # Setup logging
     setup_logging(app)
+    app.logger.info(f"Starting application in {config_name} mode")
     
     # Initialize extensions
     CORS(app)
-    socketio.init_app(
-        app,
-        cors_allowed_origins=app.config['SOCKETIO_CORS_ALLOWED_ORIGINS'],
-        async_mode=app.config['SOCKETIO_ASYNC_MODE'],
-        ping_timeout=app.config['SOCKETIO_PING_TIMEOUT'],
-        ping_interval=app.config['SOCKETIO_PING_INTERVAL']
-    )
+    socketio.init_app(app)
     
     # Initialize AppData Manager
-    _initialize_appdata(app)
+    with app.app_context():
+        _initialize_appdata(app)
     
-    # Register blueprints (API routes)
+    # Register blueprints
+    from backend.api import register_blueprints
     register_blueprints(app)
     
     # Register socket handlers
-    register_socket_handlers(socketio)
+    from backend.socket_handlers import register_socket_handlers
+    register_socket_handlers(socketio, app)
     
-    # Register AppData socket handlers
-    register_appdata_socket_handlers(socketio, app)
+    # Serve index.html at root
+    @app.route('/')
+    def index():
+        """Serve the main index.html file"""
+        return send_from_directory(str(base_dir / 'static'), 'index.html')
     
-    # Register static file routes
-    register_static_routes(app, base_dir)
-    
-    # Register error handlers
-    register_error_handlers(app)
-    
-    # Log startup
-    app.logger.info(f"🚀 AutoPilot IDE v{app.config['VERSION']} initialized")
-    app.logger.info(f"   Environment: {config_name or 'development'}")
+    # Health check endpoint
+    @app.route('/api/health')
+    def health():
+        """Health check endpoint"""
+        return {'status': 'ok', 'message': 'AutoPilot IDE is running'}
     
     return app
-
-
-def register_static_routes(app: Flask, base_dir: Path):
-    """Register routes for serving static files and index.html"""
-    
-    @app.route('/')
-    def serve_index():
-        """Serve the main index.html file"""
-        return send_from_directory(str(base_dir), 'index.html')
-    
-    @app.route('/<path:filename>')
-    def serve_static_files(filename):
-        """Serve static files (JS, CSS, images, etc.)"""
-        return send_from_directory(str(base_dir), filename)
-    
-    app.logger.info(f"Static files served from: {base_dir}")
-
-
-def register_appdata_socket_handlers(socketio: SocketIO, app: Flask):
-    """Register Socket.IO handlers for AppData synchronization"""
-    
-    @socketio.on('appdata:sync')
-    def handle_appdata_sync(data):
-        """Handle AppData sync request"""
-        try:
-            from backend.services.appdata_manager import get_appdata_manager
-            from flask_socketio import emit
-            
-            appdata = get_appdata_manager()
-            data_type = data.get('type')
-            
-            if data_type == 'projects':
-                emit('appdata:projects', appdata.get_projects())
-            elif data_type == 'themes':
-                emit('appdata:themes', appdata.get_themes())
-            elif data_type == 'extensions':
-                emit('appdata:extensions', appdata.get_extensions())
-            elif data_type == 'layouts':
-                emit('appdata:layouts', appdata.get_layouts())
-            elif data_type == 'settings':
-                emit('appdata:settings', appdata.get_settings())
-            elif data_type == 'all':
-                emit('appdata:all', {
-                    'projects': appdata.get_projects(),
-                    'themes': appdata.get_themes(),
-                    'extensions': appdata.get_extensions(),
-                    'layouts': appdata.get_layouts(),
-                    'settings': appdata.get_settings()
-                })
-            else:
-                emit('appdata:error', {'error': 'Invalid data type'})
-                
-        except Exception as e:
-            app.logger.error(f"Error handling AppData sync: {e}")
-            emit('appdata:error', {'error': str(e)})
-    
-    @socketio.on('appdata:update')
-    def handle_appdata_update(data):
-        """Handle AppData update notification"""
-        try:
-            from flask_socketio import emit
-            
-            # Broadcast update to all clients
-            emit('appdata:updated', data, broadcast=True)
-            
-        except Exception as e:
-            app.logger.error(f"Error handling AppData update: {e}")
-
-
-def register_error_handlers(app: Flask):
-    """Register error handlers for the application"""
-    
-    @app.errorhandler(404)
-    def not_found(error):
-        return {'error': 'Resource not found'}, 404
-    
-    @app.errorhandler(500)
-    def internal_error(error):
-        app.logger.error(f"Internal error: {error}")
-        return {'error': 'Internal server error'}, 500
-    
-    @app.errorhandler(Exception)
-    def handle_exception(error):
-        app.logger.error(f"Unhandled exception: {error}", exc_info=True)
-        return {'error': 'An unexpected error occurred'}, 500
