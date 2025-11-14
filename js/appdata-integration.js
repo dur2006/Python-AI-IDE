@@ -1,425 +1,469 @@
 /**
  * AppData Integration Layer
- * Non-breaking enhancement system for Python-AI-IDE
- * 
- * This module provides a compatibility bridge between the AppData backend
- * and the existing frontend systems. It gracefully falls back to existing
- * functionality when the backend is unavailable.
- * 
- * Load Order: MUST load after layout-manager.js and layout-fixes.js
+ * Provides centralized access to application data with caching and event system
  */
 
-(function() {
-  'use strict';
-
-  // Configuration
-  const CONFIG = {
-    apiBase: '/api',
-    retryAttempts: 3,
-    retryDelay: 1000,
-    cacheTimeout: 5 * 60 * 1000, // 5 minutes
-    enableLogging: true
-  };
-
-  // Cache storage
-  const cache = {
-    themes: null,
-    layouts: null,
-    extensions: null,
-    projects: null,
-    appDataInfo: null,
-    timestamps: {}
-  };
-
-  // Logging utility
-  const logger = {
-    log: (msg, data) => {
-      if (CONFIG.enableLogging) {
-        console.log(`[AppDataIntegration] ${msg}`, data || '');
-      }
-    },
-    warn: (msg, data) => {
-      if (CONFIG.enableLogging) {
-        console.warn(`[AppDataIntegration] ${msg}`, data || '');
-      }
-    },
-    error: (msg, data) => {
-      if (CONFIG.enableLogging) {
-        console.error(`[AppDataIntegration] ${msg}`, data || '');
-      }
+class AppDataIntegration {
+    constructor() {
+        this.baseUrl = '/api';
+        this.cache = {
+            projects: null,
+            themes: null,
+            extensions: null,
+            layouts: null,
+            settings: null
+        };
+        this.listeners = {};
+        this.initialized = false;
+        
+        console.log('🔧 AppData Integration initialized');
     }
-  };
 
-  // API utilities
-  const api = {
-    async fetch(endpoint, options = {}) {
-      const url = `${CONFIG.apiBase}${endpoint}`;
-      let lastError;
-
-      for (let attempt = 0; attempt < CONFIG.retryAttempts; attempt++) {
+    /**
+     * Initialize AppData integration
+     */
+    async initialize() {
         try {
-          const response = await fetch(url, {
-            method: options.method || 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              ...options.headers
-            },
-            body: options.body ? JSON.stringify(options.body) : undefined
-          });
-
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-
-          return await response.json();
+            console.log('🚀 Initializing AppData...');
+            
+            // Load all data from backend
+            await Promise.all([
+                this.loadProjects(),
+                this.loadThemes(),
+                this.loadExtensions(),
+                this.loadLayouts(),
+                this.loadSettings()
+            ]);
+            
+            this.initialized = true;
+            this.emit('initialized', { status: 'success' });
+            console.log('✅ AppData initialized successfully');
+            
+            return true;
         } catch (error) {
-          lastError = error;
-          if (attempt < CONFIG.retryAttempts - 1) {
-            await new Promise(resolve => setTimeout(resolve, CONFIG.retryDelay));
-          }
+            console.error('❌ AppData initialization failed:', error);
+            this.emit('error', { message: 'Initialization failed', error });
+            return false;
         }
-      }
-
-      throw lastError;
-    },
-
-    async checkAvailability() {
-      try {
-        const info = await this.fetch('/appdata/info');
-        return info;
-      } catch (error) {
-        logger.warn('Backend not available:', error.message);
-        return null;
-      }
     }
-  };
 
-  // Cache management
-  const cacheManager = {
-    set(key, value) {
-      cache[key] = value;
-      cache.timestamps[key] = Date.now();
-    },
-
-    get(key) {
-      if (!cache[key]) return null;
-
-      const age = Date.now() - cache.timestamps[key];
-      if (age > CONFIG.cacheTimeout) {
-        cache[key] = null;
-        cache.timestamps[key] = null;
-        return null;
-      }
-
-      return cache[key];
-    },
-
-    clear() {
-      Object.keys(cache).forEach(key => {
-        if (key !== 'timestamps') {
-          cache[key] = null;
+    /**
+     * Get AppData status
+     */
+    async getStatus() {
+        try {
+            const response = await fetch(`${this.baseUrl}/appdata/status`);
+            if (!response.ok) throw new Error('Failed to get status');
+            const status = await response.json();
+            return status;
+        } catch (error) {
+            console.error('Error getting AppData status:', error);
+            throw error;
         }
-      });
-      cache.timestamps = {};
     }
-  };
 
-  // Theme integration
-  const themeIntegration = {
-    async loadThemes() {
-      const cached = cacheManager.get('themes');
-      if (cached) return cached;
+    // ==================== PROJECTS ====================
 
-      try {
-        const themes = await api.fetch('/appdata/themes');
-        cacheManager.set('themes', themes);
-        logger.log('Loaded themes from backend:', themes.length);
-        return themes;
-      } catch (error) {
-        logger.warn('Failed to load themes, using defaults');
-        return this.getDefaultThemes();
-      }
-    },
-
-    getDefaultThemes() {
-      return [
-        { id: 'dark', name: 'Dark', colors: { primary: '#1e1e1e' } },
-        { id: 'light', name: 'Light', colors: { primary: '#ffffff' } }
-      ];
-    },
-
-    async applyTheme(themeId) {
-      try {
-        const themes = await this.loadThemes();
-        const theme = themes.find(t => t.id === themeId);
-
-        if (!theme) {
-          logger.warn('Theme not found:', themeId);
-          return false;
+    async loadProjects() {
+        try {
+            const response = await fetch(`${this.baseUrl}/projects`);
+            if (!response.ok) throw new Error('Failed to load projects');
+            this.cache.projects = await response.json();
+            this.emit('projects:loaded', this.cache.projects);
+            return this.cache.projects;
+        } catch (error) {
+            console.error('Error loading projects:', error);
+            throw error;
         }
-
-        // Apply theme via CSS custom properties
-        if (theme.colors) {
-          Object.entries(theme.colors).forEach(([key, value]) => {
-            document.documentElement.style.setProperty(`--${key}`, value);
-          });
-        }
-
-        logger.log('Applied theme:', themeId);
-        document.dispatchEvent(new CustomEvent('themeChanged', { detail: { themeId } }));
-        return true;
-      } catch (error) {
-        logger.error('Error applying theme:', error);
-        return false;
-      }
-    },
-
-    enhanceThemeMenu() {
-      const themeMenu = document.getElementById('themeMenu');
-      if (!themeMenu) return;
-
-      this.loadThemes().then(themes => {
-        // Filter out default themes (already in menu)
-        const customThemes = themes.filter(t => t.id !== 'dark' && t.id !== 'light');
-
-        if (customThemes.length > 0) {
-          // Add separator if not exists
-          if (!themeMenu.querySelector('.dropdown-separator:last-of-type')) {
-            const separator = document.createElement('div');
-            separator.className = 'dropdown-separator';
-            themeMenu.appendChild(separator);
-          }
-
-          // Add custom themes
-          customThemes.forEach(theme => {
-            const item = document.createElement('div');
-            item.className = 'dropdown-item';
-            item.innerHTML = `
-              <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
-              </svg>
-              <span>${theme.name}</span>
-            `;
-            item.addEventListener('click', () => this.applyTheme(theme.id));
-            themeMenu.appendChild(item);
-          });
-
-          logger.log('Enhanced theme menu with', customThemes.length, 'custom themes');
-        }
-      });
     }
-  };
 
-  // Layout integration
-  const layoutIntegration = {
-    async loadLayouts() {
-      const cached = cacheManager.get('layouts');
-      if (cached) return cached;
+    getProjects() {
+        return this.cache.projects || [];
+    }
 
-      try {
-        const layouts = await api.fetch('/appdata/layouts');
-        cacheManager.set('layouts', layouts);
-        logger.log('Loaded layouts from backend:', layouts.length);
-        return layouts;
-      } catch (error) {
-        logger.warn('Failed to load layouts');
-        return [];
-      }
-    },
+    async getProject(projectId) {
+        try {
+            const response = await fetch(`${this.baseUrl}/projects/${projectId}`);
+            if (!response.ok) throw new Error('Project not found');
+            return await response.json();
+        } catch (error) {
+            console.error('Error getting project:', error);
+            throw error;
+        }
+    }
 
-    enhanceLayoutMenu() {
-      const layoutMenu = document.getElementById('layoutsMenu');
-      if (!layoutMenu) return;
-
-      this.loadLayouts().then(layouts => {
-        if (layouts.length > 0) {
-          // Add separator
-          const separator = document.createElement('div');
-          separator.className = 'dropdown-separator';
-          layoutMenu.appendChild(separator);
-
-          // Add custom layouts
-          layouts.forEach(layout => {
-            const item = document.createElement('div');
-            item.className = 'dropdown-item';
-            item.innerHTML = `
-              <svg class="dropdown-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2"/>
-              </svg>
-              <span>${layout.name}</span>
-            `;
-            item.addEventListener('click', () => {
-              if (window.layoutManager) {
-                window.layoutManager.applyLayout(layout.id);
-              }
+    async createProject(name, type = 'Python', description = '') {
+        try {
+            const response = await fetch(`${this.baseUrl}/projects`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, type, description })
             });
-            layoutMenu.appendChild(item);
-          });
-
-          logger.log('Enhanced layout menu with', layouts.length, 'custom layouts');
+            
+            if (!response.ok) throw new Error('Failed to create project');
+            const project = await response.json();
+            
+            // Update cache
+            await this.loadProjects();
+            this.emit('project:created', project);
+            
+            return project;
+        } catch (error) {
+            console.error('Error creating project:', error);
+            throw error;
         }
-      });
     }
-  };
 
-  // Extension integration
-  const extensionIntegration = {
+    async deleteProject(projectId) {
+        try {
+            const response = await fetch(`${this.baseUrl}/projects/${projectId}`, {
+                method: 'DELETE'
+            });
+            
+            if (!response.ok) throw new Error('Failed to delete project');
+            
+            // Update cache
+            await this.loadProjects();
+            this.emit('project:deleted', { id: projectId });
+            
+            return true;
+        } catch (error) {
+            console.error('Error deleting project:', error);
+            throw error;
+        }
+    }
+
+    // ==================== THEMES ====================
+
+    async loadThemes() {
+        try {
+            const response = await fetch(`${this.baseUrl}/themes`);
+            if (!response.ok) throw new Error('Failed to load themes');
+            this.cache.themes = await response.json();
+            this.emit('themes:loaded', this.cache.themes);
+            return this.cache.themes;
+        } catch (error) {
+            console.error('Error loading themes:', error);
+            throw error;
+        }
+    }
+
+    getThemes() {
+        return this.cache.themes || [];
+    }
+
+    getActiveTheme() {
+        const themes = this.getThemes();
+        return themes.find(t => t.active) || null;
+    }
+
+    async activateTheme(themeId) {
+        try {
+            const response = await fetch(`${this.baseUrl}/themes/${themeId}/activate`, {
+                method: 'POST'
+            });
+            
+            if (!response.ok) throw new Error('Failed to activate theme');
+            const result = await response.json();
+            
+            // Update cache
+            await this.loadThemes();
+            this.emit('theme:activated', result.theme);
+            
+            return result.theme;
+        } catch (error) {
+            console.error('Error activating theme:', error);
+            throw error;
+        }
+    }
+
+    // ==================== EXTENSIONS ====================
+
     async loadExtensions() {
-      const cached = cacheManager.get('extensions');
-      if (cached) return cached;
+        try {
+            const response = await fetch(`${this.baseUrl}/extensions`);
+            if (!response.ok) throw new Error('Failed to load extensions');
+            this.cache.extensions = await response.json();
+            this.emit('extensions:loaded', this.cache.extensions);
+            return this.cache.extensions;
+        } catch (error) {
+            console.error('Error loading extensions:', error);
+            throw error;
+        }
+    }
 
-      try {
-        const extensions = await api.fetch('/appdata/extensions');
-        cacheManager.set('extensions', extensions);
-        logger.log('Loaded extensions from backend:', extensions.length);
-        return extensions;
-      } catch (error) {
-        logger.warn('Failed to load extensions');
-        return [];
-      }
-    },
+    getExtensions() {
+        return this.cache.extensions || [];
+    }
+
+    getInstalledExtensions() {
+        return this.getExtensions().filter(e => e.installed);
+    }
+
+    getAvailableExtensions() {
+        return this.getExtensions().filter(e => !e.installed);
+    }
 
     async toggleExtension(extensionId) {
-      try {
-        await api.fetch(`/appdata/extensions/${extensionId}/toggle`, { method: 'POST' });
-        cacheManager.set('extensions', null); // Invalidate cache
-        document.dispatchEvent(new CustomEvent('extensionToggled', { detail: { extensionId } }));
-        return true;
-      } catch (error) {
-        logger.error('Error toggling extension:', error);
-        return false;
-      }
-    },
+        try {
+            const response = await fetch(`${this.baseUrl}/extensions/${extensionId}/toggle`, {
+                method: 'POST'
+            });
+            
+            if (!response.ok) throw new Error('Failed to toggle extension');
+            const result = await response.json();
+            
+            // Update cache
+            await this.loadExtensions();
+            this.emit('extension:toggled', result.extension);
+            
+            return result.extension;
+        } catch (error) {
+            console.error('Error toggling extension:', error);
+            throw error;
+        }
+    }
 
     async installExtension(extensionId) {
-      try {
-        await api.fetch(`/appdata/extensions/${extensionId}/install`, { method: 'POST' });
-        cacheManager.set('extensions', null); // Invalidate cache
-        document.dispatchEvent(new CustomEvent('extensionInstalled', { detail: { extensionId } }));
-        return true;
-      } catch (error) {
-        logger.error('Error installing extension:', error);
-        return false;
-      }
-    },
+        try {
+            const response = await fetch(`${this.baseUrl}/extensions/${extensionId}/install`, {
+                method: 'POST'
+            });
+            
+            if (!response.ok) throw new Error('Failed to install extension');
+            const result = await response.json();
+            
+            // Update cache
+            await this.loadExtensions();
+            this.emit('extension:installed', result.extension);
+            
+            return result.extension;
+        } catch (error) {
+            console.error('Error installing extension:', error);
+            throw error;
+        }
+    }
 
-    mergeWithExisting() {
-      this.loadExtensions().then(backendExtensions => {
-        // Merge with existing mock arrays if they exist
-        if (window.installedExtensions && Array.isArray(window.installedExtensions)) {
-          const merged = [...window.installedExtensions];
-          backendExtensions.forEach(ext => {
-            if (!merged.find(e => e.id === ext.id)) {
-              merged.push(ext);
+    async uninstallExtension(extensionId) {
+        try {
+            const response = await fetch(`${this.baseUrl}/extensions/${extensionId}/uninstall`, {
+                method: 'POST'
+            });
+            
+            if (!response.ok) throw new Error('Failed to uninstall extension');
+            
+            // Update cache
+            await this.loadExtensions();
+            this.emit('extension:uninstalled', { id: extensionId });
+            
+            return true;
+        } catch (error) {
+            console.error('Error uninstalling extension:', error);
+            throw error;
+        }
+    }
+
+    // ==================== LAYOUTS ====================
+
+    async loadLayouts() {
+        try {
+            const response = await fetch(`${this.baseUrl}/layouts`);
+            if (!response.ok) throw new Error('Failed to load layouts');
+            this.cache.layouts = await response.json();
+            this.emit('layouts:loaded', this.cache.layouts);
+            return this.cache.layouts;
+        } catch (error) {
+            console.error('Error loading layouts:', error);
+            throw error;
+        }
+    }
+
+    getLayouts() {
+        return this.cache.layouts || [];
+    }
+
+    getActiveLayout() {
+        const layouts = this.getLayouts();
+        return layouts.find(l => l.active) || null;
+    }
+
+    async activateLayout(layoutId) {
+        try {
+            const response = await fetch(`${this.baseUrl}/layouts/${layoutId}/activate`, {
+                method: 'POST'
+            });
+            
+            if (!response.ok) throw new Error('Failed to activate layout');
+            const result = await response.json();
+            
+            // Update cache
+            await this.loadLayouts();
+            this.emit('layout:activated', result.layout);
+            
+            return result.layout;
+        } catch (error) {
+            console.error('Error activating layout:', error);
+            throw error;
+        }
+    }
+
+    async saveLayout(layoutId, config) {
+        try {
+            const response = await fetch(`${this.baseUrl}/layouts/${layoutId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ config })
+            });
+            
+            if (!response.ok) throw new Error('Failed to save layout');
+            const result = await response.json();
+            
+            // Update cache
+            await this.loadLayouts();
+            this.emit('layout:saved', result.layout);
+            
+            return result.layout;
+        } catch (error) {
+            console.error('Error saving layout:', error);
+            throw error;
+        }
+    }
+
+    // ==================== SETTINGS ====================
+
+    async loadSettings() {
+        try {
+            const response = await fetch(`${this.baseUrl}/settings`);
+            if (!response.ok) throw new Error('Failed to load settings');
+            this.cache.settings = await response.json();
+            this.emit('settings:loaded', this.cache.settings);
+            return this.cache.settings;
+        } catch (error) {
+            console.error('Error loading settings:', error);
+            throw error;
+        }
+    }
+
+    getSettings() {
+        return this.cache.settings || {};
+    }
+
+    getSetting(key) {
+        return this.getSettings()[key];
+    }
+
+    async setSetting(key, value) {
+        try {
+            const response = await fetch(`${this.baseUrl}/settings/${key}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ value })
+            });
+            
+            if (!response.ok) throw new Error('Failed to set setting');
+            
+            // Update cache
+            await this.loadSettings();
+            this.emit('setting:updated', { key, value });
+            
+            return true;
+        } catch (error) {
+            console.error('Error setting value:', error);
+            throw error;
+        }
+    }
+
+    async updateSettings(updates) {
+        try {
+            const response = await fetch(`${this.baseUrl}/settings`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updates)
+            });
+            
+            if (!response.ok) throw new Error('Failed to update settings');
+            const result = await response.json();
+            
+            // Update cache
+            this.cache.settings = result.settings;
+            this.emit('settings:updated', result.settings);
+            
+            return result.settings;
+        } catch (error) {
+            console.error('Error updating settings:', error);
+            throw error;
+        }
+    }
+
+    // ==================== EVENT SYSTEM ====================
+
+    on(event, callback) {
+        if (!this.listeners[event]) {
+            this.listeners[event] = [];
+        }
+        this.listeners[event].push(callback);
+    }
+
+    off(event, callback) {
+        if (!this.listeners[event]) return;
+        this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
+    }
+
+    emit(event, data) {
+        if (!this.listeners[event]) return;
+        this.listeners[event].forEach(callback => {
+            try {
+                callback(data);
+            } catch (error) {
+                console.error(`Error in event listener for ${event}:`, error);
             }
-          });
-          window.installedExtensions = merged;
-        }
-
-        document.dispatchEvent(new CustomEvent('extensionsLoaded', { detail: { extensions: backendExtensions } }));
-        logger.log('Merged extensions with existing system');
-      });
+        });
     }
-  };
 
-  // Project integration
-  const projectIntegration = {
-    async loadProjects() {
-      const cached = cacheManager.get('projects');
-      if (cached) return cached;
+    // ==================== UTILITY METHODS ====================
 
-      try {
-        const projects = await api.fetch('/appdata/projects');
-        cacheManager.set('projects', projects);
-        logger.log('Loaded projects from backend:', projects.length);
-        return projects;
-      } catch (error) {
-        logger.warn('Failed to load projects');
-        return [];
-      }
-    },
-
-    notifyProjectsLoaded() {
-      this.loadProjects().then(projects => {
-        document.dispatchEvent(new CustomEvent('backendProjectsLoaded', { detail: { projects } }));
-        logger.log('Notified systems of loaded projects');
-      });
+    clearCache() {
+        this.cache = {
+            projects: null,
+            themes: null,
+            extensions: null,
+            layouts: null,
+            settings: null
+        };
+        console.log('🗑️ Cache cleared');
     }
-  };
 
-  // Public API
-  const appDataIntegration = {
-    // Availability
-    isBackendAvailable() {
-      return cache.appDataInfo !== null;
-    },
-
-    getBackendInfo() {
-      return cache.appDataInfo;
-    },
-
-    // Themes
-    loadThemes: () => themeIntegration.loadThemes(),
-    applyTheme: (id) => themeIntegration.applyTheme(id),
-
-    // Layouts
-    loadLayouts: () => layoutIntegration.loadLayouts(),
-
-    // Extensions
-    loadExtensions: () => extensionIntegration.loadExtensions(),
-    toggleExtension: (id) => extensionIntegration.toggleExtension(id),
-    installExtension: (id) => extensionIntegration.installExtension(id),
-
-    // Projects
-    loadProjects: () => projectIntegration.loadProjects(),
-
-    // Cache
-    clearCache: () => cacheManager.clear(),
-
-    // Initialization
-    async refreshAll() {
-      logger.log('Refreshing all data...');
-      cacheManager.clear();
-      await this.init();
-    },
-
-    async init() {
-      logger.log('Initializing AppData integration...');
-
-      try {
-        // Check backend availability
-        const info = await api.checkAvailability();
-        if (info) {
-          cache.appDataInfo = info;
-          logger.log('Backend is available');
-
-          // Enhance menus
-          themeIntegration.enhanceThemeMenu();
-          layoutIntegration.enhanceLayoutMenu();
-          extensionIntegration.mergeWithExisting();
-          projectIntegration.notifyProjectsLoaded();
-        } else {
-          logger.log('Backend is not available - using fallback mode');
-        }
-      } catch (error) {
-        logger.error('Initialization error:', error);
-      }
-
-      // Dispatch ready event
-      document.dispatchEvent(new CustomEvent('appDataIntegrationReady'));
-      logger.log('AppData integration ready');
+    async refresh() {
+        console.log('🔄 Refreshing AppData...');
+        this.clearCache();
+        await this.initialize();
     }
-  };
 
-  // Expose public API
-  window.appDataIntegration = appDataIntegration;
+    isInitialized() {
+        return this.initialized;
+    }
+}
 
-  // Auto-initialize when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => appDataIntegration.init());
-  } else {
-    appDataIntegration.init();
-  }
+// Create global instance
+window.appDataIntegration = new AppDataIntegration();
 
-  logger.log('AppData integration module loaded');
-})();
+// Auto-initialize on DOM ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.appDataIntegration.initialize();
+    });
+} else {
+    window.appDataIntegration.initialize();
+}
+
+// Export for module usage
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = AppDataIntegration;
+}
+
+// Global helper function
+function getAppDataIntegration() {
+    return window.appDataIntegration;
+}
+
+console.log('✅ AppData Integration layer loaded');
