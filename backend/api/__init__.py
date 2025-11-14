@@ -29,16 +29,6 @@ def register_blueprints(app: Flask):
     api.register_blueprint(layouts_bp, url_prefix='/layouts')
     api.register_blueprint(settings_bp, url_prefix='/settings')
     
-    # Health check endpoint
-    @api.route('/health', methods=['GET'])
-    def health_check():
-        """API health check endpoint"""
-        return jsonify({
-            'status': 'healthy',
-            'version': app.config.get('VERSION', '1.0.0'),
-            'service': 'AutoPilot IDE API'
-        })
-    
     # AppData status endpoint
     @api.route('/appdata/status', methods=['GET'])
     def appdata_status():
@@ -55,12 +45,7 @@ def register_blueprints(app: Flask):
     # Register main API blueprint
     app.register_blueprint(api)
     
-    # Root route - serve frontend
-    @app.route('/')
-    def index():
-        from flask import send_from_directory
-        return send_from_directory('../static', 'index.html')
-    
+    # Log registered endpoints
     app.logger.info("[OK] API blueprints registered successfully")
     app.logger.info("   - Extensions API: /api/extensions")
     app.logger.info("   - Projects API: /api/projects")
