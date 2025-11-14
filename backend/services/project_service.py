@@ -1,106 +1,42 @@
 """
 Project Service
-Business logic for project management
+Business logic for project management - now using AppData Manager as backend
 """
 
-import json
 import os
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional
 from flask import current_app
 
+from backend.services.appdata_manager import get_appdata_manager
+
 
 class ProjectService:
-    """Service for managing projects"""
+    """
+    Service for managing projects
+    Now uses AppData Manager for data persistence while maintaining same API
+    """
     
     def __init__(self):
-        self.projects_file = None
-        self.projects = []
-    
-    def _get_projects_file(self) -> Path:
-        """Get the projects JSON file path"""
-        if self.projects_file is None:
-            data_dir = current_app.config.get('DATA_DIR', Path('data'))
-            self.projects_file = data_dir / 'projects.json'
-            self.projects_file.parent.mkdir(parents=True, exist_ok=True)
-        return self.projects_file
-    
-    def _load_projects(self) -> List[Dict]:
-        """Load projects from JSON file"""
-        try:
-            projects_file = self._get_projects_file()
-            if projects_file.exists():
-                with open(projects_file, 'r') as f:
-                    self.projects = json.load(f)
-            else:
-                self.projects = self._create_default_projects()
-                self._save_projects()
-            return self.projects
-        except Exception as e:
-            current_app.logger.error(f"Error loading projects: {e}")
-            return []
-    
-    def _save_projects(self):
-        """Save projects to JSON file"""
-        try:
-            projects_file = self._get_projects_file()
-            with open(projects_file, 'w') as f:
-                json.dump(self.projects, f, indent=2)
-        except Exception as e:
-            current_app.logger.error(f"Error saving projects: {e}")
-    
-    def _create_default_projects(self) -> List[Dict]:
-        """Create default sample projects"""
-        return [
-            {
-                'id': 'autopilot-project-1',
-                'name': 'AutoPilot-Project',
-                'path': str(current_app.config['PROJECTS_DIR'] / 'AutoPilot-Project'),
-                'type': 'Python',
-                'createdAt': datetime.now().isoformat(),
-                'lastOpened': datetime.now().isoformat(),
-                'description': 'Main AutoPilot IDE project'
-            },
-            {
-                'id': 'webapp-demo-1',
-                'name': 'WebApp-Demo',
-                'path': str(current_app.config['PROJECTS_DIR'] / 'WebApp-Demo'),
-                'type': 'JavaScript',
-                'createdAt': datetime.now().isoformat(),
-                'lastOpened': datetime.now().isoformat(),
-                'description': 'Sample web application'
-            }
-        ]
+        self.appdata = get_appdata_manager()
     
     def get_all_projects(self) -> List[Dict]:
         """Get all projects"""
-        if not self.projects:
-            self._load_projects()
-        return self.projects
+        return self.appdata.get_projects()
     
     def get_project(self, project_id: str) -> Optional[Dict]:
         """Get a specific project by ID"""
-        projects = self.get_all_projects()
-        return next((p for p in projects if p['id'] == project_id), None)
+        return self.appdata.get_project(project_id)
     
     def create_project(self, name: str, project_type: str = 'Python', 
-                      path: str = None) -> Dict:
+                      path: str = None, description: str = '') -> Dict:
         """Create a new project"""
-        project_id = f"project-{datetime.now().timestamp()}"
         
+        # Use provided path or generate default
         if path is None:
-            path = str(current_app.config['PROJECTS_DIR'] / name)
-        
-        project = {
-            'id': project_id,
-            'name': name,
-            'path': path,
-            'type': project_type,
-            'createdAt': datetime.now().isoformat(),
-            'lastOpened': datetime.now().isoformat(),
-            'description': f'{project_type} project'
-        }
+            projects_dir = current_app.config.get('PROJECTS_DIR', Path('projects'))
+            path = str(projects_dir / name.replace(' ', '-'))
         
         # Create project directory
         try:
@@ -109,27 +45,38 @@ class ProjectService:
         except Exception as e:
             current_app.logger.error(f"Error creating project directory: {e}")
         
-        projects = self.get_all_projects()
-        projects.append(project)
-        self._save_projects()
+        # Create project via AppData manager
+        project = self.appdata.create_project(
+            name=name,
+            project_type=project_type,
+            description=description
+        )
+        
+        # Update path if custom path was provided
+        if path:
+            project['path'] = path
+            self.appdata.update_project(project['id'], {'path': path})
         
         current_app.logger.info(f"Created project: {name}")
         return project
     
+    def update_project(self, project_id: str, updates: Dict) -> Optional[Dict]:
+        """Update a project"""
+        project = self.appdata.update_project(project_id, updates)
+        if project:
+            current_app.logger.info(f"Updated project: {project_id}")
+        return project
+    
     def delete_project(self, project_id: str) -> bool:
         """Delete a project"""
-        projects = self.get_all_projects()
         project = self.get_project(project_id)
-        
         if not project:
             return False
         
-        # Remove from list
-        self.projects = [p for p in projects if p['id'] != project_id]
-        self._save_projects()
-        
-        current_app.logger.info(f"Deleted project: {project['name']}")
-        return True
+        success = self.appdata.delete_project(project_id)
+        if success:
+            current_app.logger.info(f"Deleted project: {project['name']}")
+        return success
     
     def get_project_files(self, project_id: str) -> Optional[List[Dict]]:
         """Get file tree for a project"""
@@ -139,6 +86,7 @@ class ProjectService:
         
         project_path = Path(project['path'])
         if not project_path.exists():
+            current_app.logger.warning(f"Project path does not exist: {project_path}")
             return []
         
         return self._build_file_tree(project_path)
@@ -153,7 +101,7 @@ class ProjectService:
         try:
             for item in sorted(path.iterdir()):
                 # Skip hidden files and common ignore patterns
-                if item.name.startswith('.') or item.name in ['__pycache__', 'node_modules']:
+                if item.name.startswith('.') or item.name in ['__pycache__', 'node_modules', 'venv', '.git']:
                     continue
                 
                 if item.is_file():
@@ -173,6 +121,8 @@ class ProjectService:
                     })
         except PermissionError:
             current_app.logger.warning(f"Permission denied accessing: {path}")
+        except Exception as e:
+            current_app.logger.error(f"Error building file tree: {e}")
         
         return tree
     
@@ -181,12 +131,41 @@ class ProjectService:
         icon_map = {
             '.py': '🐍',
             '.js': '📜',
+            '.ts': '📘',
+            '.jsx': '⚛️',
+            '.tsx': '⚛️',
             '.html': '🌐',
             '.css': '🎨',
+            '.scss': '🎨',
             '.json': '📋',
             '.md': '📝',
             '.txt': '📄',
             '.yml': '⚙️',
             '.yaml': '⚙️',
+            '.xml': '📋',
+            '.sql': '🗄️',
+            '.sh': '🔧',
+            '.bat': '🔧',
+            '.env': '🔐',
+            '.gitignore': '📦',
+            '.dockerfile': '🐳',
+            '.docker': '🐳',
         }
         return icon_map.get(extension.lower(), '📄')
+    
+    def open_project(self, project_id: str) -> Optional[Dict]:
+        """Mark project as opened (updates lastOpened timestamp)"""
+        return self.appdata.update_project(project_id, {
+            'lastOpened': datetime.now().isoformat()
+        })
+    
+    def get_recent_projects(self, limit: int = 5) -> List[Dict]:
+        """Get recently opened projects"""
+        projects = self.get_all_projects()
+        # Sort by lastOpened timestamp
+        sorted_projects = sorted(
+            projects,
+            key=lambda p: p.get('lastOpened', ''),
+            reverse=True
+        )
+        return sorted_projects[:limit]
