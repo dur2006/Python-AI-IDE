@@ -1,6 +1,7 @@
 /**
  * AutoPilot IDE - Project Manager Module
  * Handles project creation, loading, switching, and persistence
+ * Integrates with AppData backend when available
  */
 
 class ProjectManager {
@@ -9,12 +10,24 @@ class ProjectManager {
         this.currentProject = null;
         this.storageKey = 'autopilot_projects';
         this.currentProjectKey = 'autopilot_current_project';
+        this.backendAvailable = false;
         this.init();
     }
 
-    init() {
+    async init() {
         console.log('[ProjectManager] Initializing...');
-        this.loadProjects();
+        
+        // Check if AppData backend is available
+        await this.checkBackendAvailability();
+        
+        if (this.backendAvailable) {
+            console.log('[ProjectManager] Backend available - loading projects from AppData');
+            await this.loadProjectsFromBackend();
+        } else {
+            console.log('[ProjectManager] Backend unavailable - using localStorage');
+            this.loadProjects();
+        }
+        
         this.loadCurrentProject();
         
         if (!this.currentProject && this.projects.length > 0) {
@@ -24,6 +37,115 @@ class ProjectManager {
         if (!this.currentProject) {
             this.createDefaultProjects();
         }
+        
+        // Listen for backend project updates
+        document.addEventListener('backendProjectsLoaded', (e) => {
+            console.log('[ProjectManager] Backend projects loaded event received');
+            this.handleBackendProjects(e.detail.projects);
+        });
+    }
+
+    async checkBackendAvailability() {
+        try {
+            const response = await fetch('/api/appdata/info', {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                this.backendAvailable = data.available === true;
+                console.log('[ProjectManager] Backend availability:', this.backendAvailable);
+            }
+        } catch (error) {
+            console.log('[ProjectManager] Backend not available:', error.message);
+            this.backendAvailable = false;
+        }
+    }
+
+    async loadProjectsFromBackend() {
+        try {
+            const response = await fetch('/api/appdata/projects', {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (Array.isArray(data)) {
+                this.projects = data.map(project => this.normalizeProject(project));
+                console.log('[ProjectManager] Loaded', this.projects.length, 'projects from backend');
+                
+                // Also save to localStorage as backup
+                this.saveProjects();
+            }
+        } catch (error) {
+            console.error('[ProjectManager] Error loading projects from backend:', error);
+            // Fallback to localStorage
+            this.loadProjects();
+        }
+    }
+
+    normalizeProject(project) {
+        // Normalize backend project format to match our internal format
+        return {
+            id: project.id || `project-${Date.now()}`,
+            name: project.name || 'Untitled Project',
+            path: project.path || `/home/user/projects/${project.name}`,
+            type: project.type || project.language || 'Python',
+            createdAt: project.createdAt || project.created_at || new Date().toISOString(),
+            lastOpened: project.lastOpened || project.last_opened || new Date().toISOString(),
+            files: this.normalizeFiles(project.files || [])
+        };
+    }
+
+    normalizeFiles(files) {
+        if (!Array.isArray(files)) return [];
+        
+        return files.map(file => ({
+            name: file.name || file.filename || 'untitled',
+            type: file.type || 'file',
+            icon: this.getFileIcon(file.name || file.filename || '')
+        }));
+    }
+
+    getFileIcon(filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        const iconMap = {
+            'py': '📄',
+            'js': '📄',
+            'ts': '📄',
+            'html': '🌐',
+            'css': '🎨',
+            'json': '📦',
+            'md': '📄',
+            'txt': '📄'
+        };
+        return iconMap[ext] || '📄';
+    }
+
+    handleBackendProjects(backendProjects) {
+        if (!Array.isArray(backendProjects)) return;
+        
+        this.projects = backendProjects.map(project => this.normalizeProject(project));
+        this.saveProjects();
+        
+        // Update UI if current project changed
+        if (this.currentProject) {
+            const updatedCurrent = this.projects.find(p => p.id === this.currentProject.id);
+            if (updatedCurrent) {
+                this.currentProject = updatedCurrent;
+            }
+        }
+        
+        // Dispatch event for UI updates
+        document.dispatchEvent(new CustomEvent('projectsUpdated', {
+            detail: { projects: this.projects }
+        }));
     }
 
     createDefaultProjects() {
@@ -121,6 +243,12 @@ class ProjectManager {
             this.saveProjects();
             localStorage.setItem(this.currentProjectKey, projectId);
             console.log('[ProjectManager] Current project set to:', project.name);
+            
+            // Dispatch event for UI updates
+            document.dispatchEvent(new CustomEvent('currentProjectChanged', {
+                detail: { project: project }
+            }));
+            
             return true;
         }
         return false;
@@ -136,7 +264,7 @@ class ProjectManager {
             .slice(0, limit);
     }
 
-    createProject(name, type, path) {
+    async createProject(name, type, path) {
         const id = `project-${Date.now()}`;
         const project = {
             id,
@@ -151,6 +279,21 @@ class ProjectManager {
         this.projects.push(project);
         this.saveProjects();
         this.setCurrentProject(id);
+        
+        // Try to sync with backend if available
+        if (this.backendAvailable) {
+            try {
+                await fetch('/api/appdata/projects', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(project)
+                });
+                console.log('[ProjectManager] Project synced to backend');
+            } catch (error) {
+                console.warn('[ProjectManager] Could not sync project to backend:', error);
+            }
+        }
+        
         console.log('[ProjectManager] Project created:', name);
         return project;
     }
@@ -178,7 +321,7 @@ class ProjectManager {
         return fileMap[type] || [];
     }
 
-    deleteProject(projectId) {
+    async deleteProject(projectId) {
         const index = this.projects.findIndex(p => p.id === projectId);
         if (index !== -1) {
             const project = this.projects[index];
@@ -187,6 +330,18 @@ class ProjectManager {
             
             if (this.currentProject?.id === projectId) {
                 this.setCurrentProject(this.projects[0]?.id || null);
+            }
+            
+            // Try to delete from backend if available
+            if (this.backendAvailable) {
+                try {
+                    await fetch(`/api/appdata/projects/${projectId}`, {
+                        method: 'DELETE'
+                    });
+                    console.log('[ProjectManager] Project deleted from backend');
+                } catch (error) {
+                    console.warn('[ProjectManager] Could not delete project from backend:', error);
+                }
             }
             
             console.log('[ProjectManager] Project deleted:', project.name);
