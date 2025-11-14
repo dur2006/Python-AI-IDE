@@ -61,7 +61,7 @@ def register_blueprints(app: Flask):
         from flask import send_from_directory
         return send_from_directory('../static', 'index.html')
     
-    app.logger.info("✅ API blueprints registered successfully")
+    app.logger.info("[OK] API blueprints registered successfully")
     app.logger.info("   - Extensions API: /api/extensions")
     app.logger.info("   - Projects API: /api/projects")
     app.logger.info("   - Files API: /api/files")
