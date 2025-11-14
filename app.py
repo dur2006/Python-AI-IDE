@@ -2,91 +2,108 @@ import os
 import json
 import subprocess
 from pathlib import Path
-from flask import Flask, jsonify, render_template_string, send_from_directory
+from flask import Flask, jsonify, render_template_string, send_from_directory, request
 from flask_socketio import SocketIO, emit
 from config import config
+from appdata_manager import appdata_manager
 
 app = Flask(__name__, static_folder='.')
 app.config.from_object(config['development'])
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Store for extensions
-EXTENSIONS_FILE = Path(__file__).parent / "extensions.json"
+# Initialize AppData on startup
+print("[*] Initializing AppData folder structure...")
+init_result = appdata_manager.initialize()
+print(f"[*] AppData Status: {init_result['status']}")
+print(f"[*] AppData Path: {appdata_manager.appdata_path}")
 
-def load_extensions():
-    """Load extensions from JSON file"""
-    if EXTENSIONS_FILE.exists():
-        with open(EXTENSIONS_FILE, 'r') as f:
-            return json.load(f)
-    return {"installed": [], "available": []}
+# API Routes - AppData Management
+@app.route('/api/appdata/init', methods=['POST'])
+def init_appdata():
+    """Initialize AppData folder structure"""
+    result = appdata_manager.initialize()
+    return jsonify(result)
 
-def save_extensions(data):
-    """Save extensions to JSON file"""
-    with open(EXTENSIONS_FILE, 'w') as f:
-        json.dump(data, f, indent=2)
+@app.route('/api/appdata/info', methods=['GET'])
+def get_appdata_info():
+    """Get AppData folder information"""
+    return jsonify(appdata_manager.get_appdata_info())
 
-# Initialize extensions file if it doesn't exist
-if not EXTENSIONS_FILE.exists():
-    initial_extensions = {
-        "installed": [
-            {"id": 1, "name": "Python Linter", "version": "1.0.0", "enabled": True},
-            {"id": 2, "name": "Git Integration", "version": "2.1.0", "enabled": True},
-            {"id": 3, "name": "REST Client", "version": "0.9.0", "enabled": True},
-            {"id": 4, "name": "TypeScript Support", "version": "1.2.0", "enabled": True}
-        ],
-        "available": [
-            {"id": 5, "name": "Database Explorer", "version": "2.0.0", "description": "Browse and query databases"},
-            {"id": 6, "name": "API Tester", "version": "1.8.0", "description": "Test REST APIs directly"},
-            {"id": 7, "name": "Code Formatter", "version": "3.1.0", "description": "Auto-format code with multiple styles"},
-            {"id": 8, "name": "Theme Pack", "version": "1.0.0", "description": "Additional color themes"}
-        ]
-    }
-    save_extensions(initial_extensions)
+# API Routes - Themes
+@app.route('/api/themes', methods=['GET'])
+def get_themes():
+    """Get all available themes"""
+    themes = appdata_manager.load_themes()
+    return jsonify(themes)
 
-@app.route('/')
-def index():
-    """Serve the main HTML file"""
-    return send_from_directory('.', 'index.html')
+@app.route('/api/themes/<theme_id>', methods=['GET'])
+def get_theme(theme_id):
+    """Get a specific theme"""
+    theme = appdata_manager.get_theme(theme_id)
+    return jsonify(theme)
 
-@app.route('/<path:filename>')
-def serve_static(filename):
-    """Serve static files"""
-    return send_from_directory('.', filename)
+# API Routes - Layouts
+@app.route('/api/layouts', methods=['GET'])
+def get_layouts():
+    """Get all available layouts"""
+    layouts = appdata_manager.load_layouts()
+    return jsonify(layouts)
 
-# API Routes
+# API Routes - Extensions
 @app.route('/api/extensions', methods=['GET'])
 def get_extensions():
     """Get all extensions"""
-    return jsonify(load_extensions())
+    extensions = appdata_manager.load_extensions()
+    return jsonify(extensions)
 
 @app.route('/api/extensions/<int:ext_id>/toggle', methods=['POST'])
 def toggle_extension(ext_id):
     """Toggle extension enabled/disabled status"""
-    data = load_extensions()
+    data = appdata_manager.load_extensions()
+    
+    if "status" in data and data["status"] == "error":
+        return jsonify(data), 400
+    
     for ext in data['installed']:
         if ext['id'] == ext_id:
             ext['enabled'] = not ext['enabled']
-            save_extensions(data)
-            return jsonify({"status": "success", "extension": ext})
+            result = appdata_manager.save_extensions(data)
+            if result['status'] == 'success':
+                return jsonify({"status": "success", "extension": ext})
+            else:
+                return jsonify(result), 500
+    
     return jsonify({"status": "error", "message": "Extension not found"}), 404
 
 @app.route('/api/extensions/<int:ext_id>/install', methods=['POST'])
 def install_extension(ext_id):
     """Install an extension"""
-    data = load_extensions()
+    data = appdata_manager.load_extensions()
+    
+    if "status" in data and data["status"] == "error":
+        return jsonify(data), 400
+    
     for ext in data['available']:
         if ext['id'] == ext_id:
             ext['enabled'] = True
             data['installed'].append(ext)
             data['available'].remove(ext)
-            save_extensions(data)
-            return jsonify({"status": "success", "extension": ext})
+            result = appdata_manager.save_extensions(data)
+            if result['status'] == 'success':
+                return jsonify({"status": "success", "extension": ext})
+            else:
+                return jsonify(result), 500
+    
     return jsonify({"status": "error", "message": "Extension not found"}), 404
 
 @app.route('/api/extensions/<int:ext_id>/uninstall', methods=['POST'])
 def uninstall_extension(ext_id):
     """Uninstall an extension"""
-    data = load_extensions()
+    data = appdata_manager.load_extensions()
+    
+    if "status" in data and data["status"] == "error":
+        return jsonify(data), 400
+    
     for ext in data['installed']:
         if ext['id'] == ext_id:
             data['available'].append({
@@ -96,18 +113,31 @@ def uninstall_extension(ext_id):
                 "description": f"Uninstalled {ext['name']}"
             })
             data['installed'].remove(ext)
-            save_extensions(data)
-            return jsonify({"status": "success"})
+            result = appdata_manager.save_extensions(data)
+            if result['status'] == 'success':
+                return jsonify({"status": "success"})
+            else:
+                return jsonify(result), 500
+    
     return jsonify({"status": "error", "message": "Extension not found"}), 404
 
+# API Routes - Projects
 @app.route('/api/projects', methods=['GET'])
 def get_projects():
     """Get list of projects"""
-    return jsonify({
-        "projects": [
-            {"id": 1, "name": "AutoPilot-Project", "path": "./projects/autopilot", "language": "Python"}
-        ]
-    })
+    projects = appdata_manager.load_projects()
+    return jsonify(projects)
+
+@app.route('/api/projects', methods=['POST'])
+def create_project():
+    """Create a new project"""
+    project_data = request.get_json()
+    result = appdata_manager.add_project(project_data)
+    
+    if result['status'] == 'success':
+        return jsonify({"status": "success", "project": project_data}), 201
+    else:
+        return jsonify(result), 500
 
 @app.route('/api/files', methods=['GET'])
 def get_files():
@@ -122,6 +152,16 @@ def get_files():
             {"name": "README.md", "type": "file", "path": "README.md"}
         ]
     })
+
+@app.route('/')
+def index():
+    """Serve the main HTML file"""
+    return send_from_directory('.', 'index.html')
+
+@app.route('/<path:filename>')
+def serve_static(filename):
+    """Serve static files"""
+    return send_from_directory('.', filename)
 
 # WebSocket Events
 @socketio.on('connect')
