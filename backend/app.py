@@ -25,6 +25,9 @@ def _initialize_appdata(app):
         # Get AppData Manager instance
         appdata = get_appdata_manager()
         
+        # Initialize data files with defaults if they don't exist
+        appdata.initialize()
+        
         # Log initialization success
         app.logger.info("[OK] AppData Manager initialized successfully")
         app.logger.info(f"   - Data directory: {appdata.data_dir}")
