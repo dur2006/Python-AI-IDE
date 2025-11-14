@@ -13,8 +13,14 @@ from backend.config import config
 from backend.utils.logger import setup_logging
 from backend.services.appdata_manager import get_appdata_manager
 
-# Initialize SocketIO
-socketio = SocketIO(cors_allowed_origins="*")
+# Initialize SocketIO with threading mode (Python 3.13 compatible)
+# Using async_mode='threading' instead of 'eventlet' for Python 3.13+ compatibility
+socketio = SocketIO(
+    cors_allowed_origins="*",
+    async_mode='threading',
+    logger=True,
+    engineio_logger=False
+)
 
 
 def _initialize_appdata(app):
@@ -66,6 +72,7 @@ def create_app(config_name='development'):
     # Setup logging
     setup_logging(app)
     app.logger.info(f"Starting application in {config_name} mode")
+    app.logger.info(f"SocketIO async mode: {socketio.async_mode}")
     
     # Initialize extensions
     CORS(app)
