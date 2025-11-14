@@ -19,16 +19,13 @@ def setup_logging(app):
     log_level = getattr(logging, app.config.get('LOG_LEVEL', 'INFO'))
     log_format = app.config.get('LOG_FORMAT')
     
-    # Configure root logger
-    logging.basicConfig(
-        level=log_level,
-        format=log_format
-    )
-    
-    # Configure Flask app logger
+    # Configure Flask app logger ONLY (not root logger)
     app.logger.setLevel(log_level)
     
-    # Remove default handlers
+    # Prevent propagation to root logger (this prevents duplicate logs)
+    app.logger.propagate = False
+    
+    # Remove any existing handlers
     app.logger.handlers.clear()
     
     # Console handler
@@ -51,4 +48,5 @@ def setup_logging(app):
         file_handler.setFormatter(logging.Formatter(log_format))
         app.logger.addHandler(file_handler)
     
+    # Log once that logging is configured
     app.logger.info("Logging configured successfully")
