@@ -17,6 +17,10 @@ const LayoutManager = (function() {
         },
         isResizing: false,
         resizingPanel: null,
+        startX: 0,
+        startY: 0,
+        startWidth: 0,
+        startHeight: 0,
         initialized: false
     };
 
@@ -243,49 +247,31 @@ const LayoutManager = (function() {
     function setupResizeHandlers() {
         console.log('[LayoutManager] Setting up resize handlers...');
 
-        // Sidebar resizer (use existing HTML element)
+        // Sidebar resizer
         const sidebarResizer = document.getElementById('sidebarResizer');
         if (sidebarResizer) {
-            sidebarResizer.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                state.isResizing = true;
-                state.resizingPanel = 'sidebar';
-                document.body.style.cursor = 'ew-resize';
-                document.body.style.userSelect = 'none';
-                console.log('[LayoutManager] Started resizing sidebar');
-            });
+            sidebarResizer.addEventListener('mousedown', (e) => startResize(e, 'sidebar'));
+            console.log('[LayoutManager] Sidebar resizer attached');
         } else {
-            console.warn('[LayoutManager] Sidebar resizer not found in HTML');
+            console.warn('[LayoutManager] Sidebar resizer not found');
         }
 
-        // Terminal resizer (use existing HTML element)
+        // Terminal resizer
         const terminalResizer = document.getElementById('terminalResizer');
         if (terminalResizer) {
-            terminalResizer.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                state.isResizing = true;
-                state.resizingPanel = 'terminal';
-                document.body.style.cursor = 'ns-resize';
-                document.body.style.userSelect = 'none';
-                console.log('[LayoutManager] Started resizing terminal');
-            });
+            terminalResizer.addEventListener('mousedown', (e) => startResize(e, 'terminal'));
+            console.log('[LayoutManager] Terminal resizer attached');
         } else {
-            console.warn('[LayoutManager] Terminal resizer not found in HTML');
+            console.warn('[LayoutManager] Terminal resizer not found');
         }
 
-        // AI Panel resizer (use existing HTML element)
+        // AI Panel resizer
         const aiPanelResizer = document.getElementById('aiPanelResizer');
         if (aiPanelResizer) {
-            aiPanelResizer.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                state.isResizing = true;
-                state.resizingPanel = 'aiPanel';
-                document.body.style.cursor = 'ew-resize';
-                document.body.style.userSelect = 'none';
-                console.log('[LayoutManager] Started resizing AI panel');
-            });
+            aiPanelResizer.addEventListener('mousedown', (e) => startResize(e, 'aiPanel'));
+            console.log('[LayoutManager] AI panel resizer attached');
         } else {
-            console.warn('[LayoutManager] AI panel resizer not found in HTML');
+            console.warn('[LayoutManager] AI panel resizer not found');
         }
 
         // Global mouse handlers
@@ -296,52 +282,85 @@ const LayoutManager = (function() {
     }
 
     /**
+     * Start resizing a panel
+     */
+    function startResize(e, panelName) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        state.isResizing = true;
+        state.resizingPanel = panelName;
+        state.startX = e.clientX;
+        state.startY = e.clientY;
+        
+        // Store initial dimensions
+        if (panelName === 'sidebar') {
+            const sidebar = document.querySelector('.sidebar');
+            state.startWidth = sidebar ? sidebar.offsetWidth : state.panels.sidebar.width;
+            document.body.style.cursor = 'ew-resize';
+        } else if (panelName === 'terminal') {
+            const terminal = document.getElementById('terminalSection');
+            state.startHeight = terminal ? terminal.offsetHeight : state.panels.terminal.height;
+            document.body.style.cursor = 'ns-resize';
+        } else if (panelName === 'aiPanel') {
+            const aiPanel = document.querySelector('.ai-panel');
+            state.startWidth = aiPanel ? aiPanel.offsetWidth : state.panels.aiPanel.width;
+            document.body.style.cursor = 'ew-resize';
+        }
+        
+        document.body.style.userSelect = 'none';
+        document.body.style.pointerEvents = 'none';
+        
+        // Re-enable pointer events on resizer
+        const resizers = document.querySelectorAll('.sidebar-resizer, .resizer, .ai-panel-resizer');
+        resizers.forEach(r => r.style.pointerEvents = 'auto');
+        
+        console.log('[LayoutManager] Started resizing:', panelName);
+    }
+
+    /**
      * Handle mouse move during resize
      */
     function handleMouseMove(e) {
         if (!state.isResizing) return;
-
-        switch (state.resizingPanel) {
-            case 'terminal':
-                resizeTerminal(e);
-                break;
-            case 'sidebar':
-                resizeSidebar(e);
-                break;
-            case 'aiPanel':
-                resizeAIPanel(e);
-                break;
-        }
+        
+        e.preventDefault();
+        
+        // Use requestAnimationFrame for smooth resizing
+        requestAnimationFrame(() => {
+            switch (state.resizingPanel) {
+                case 'sidebar':
+                    resizeSidebar(e);
+                    break;
+                case 'terminal':
+                    resizeTerminal(e);
+                    break;
+                case 'aiPanel':
+                    resizeAIPanel(e);
+                    break;
+            }
+        });
     }
 
     /**
      * Handle mouse up (end resize)
      */
-    function handleMouseUp() {
+    function handleMouseUp(e) {
         if (state.isResizing) {
             console.log('[LayoutManager] Stopped resizing:', state.resizingPanel);
+            
             state.isResizing = false;
             state.resizingPanel = null;
+            
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
+            document.body.style.pointerEvents = '';
+            
+            // Reset resizer pointer events
+            const resizers = document.querySelectorAll('.sidebar-resizer, .resizer, .ai-panel-resizer');
+            resizers.forEach(r => r.style.pointerEvents = '');
+            
             saveLayoutToStorage();
-        }
-    }
-
-    /**
-     * Resize terminal panel
-     */
-    function resizeTerminal(e) {
-        const terminal = document.getElementById('terminalSection');
-        if (!terminal) return;
-
-        const containerRect = terminal.parentElement.getBoundingClientRect();
-        const newHeight = containerRect.bottom - e.clientY;
-        
-        const { minHeight, maxHeight } = state.panels.terminal;
-        if (newHeight >= minHeight && newHeight <= maxHeight) {
-            state.panels.terminal.height = newHeight;
-            terminal.style.height = newHeight + 'px';
         }
     }
 
@@ -352,13 +371,38 @@ const LayoutManager = (function() {
         const sidebar = document.querySelector('.sidebar');
         if (!sidebar) return;
 
-        const sidebarRect = sidebar.getBoundingClientRect();
-        const newWidth = e.clientX - sidebarRect.left;
+        const deltaX = e.clientX - state.startX;
+        const newWidth = state.startWidth + deltaX;
         
         const { minWidth, maxWidth } = state.panels.sidebar;
-        if (newWidth >= minWidth && newWidth <= maxWidth) {
-            state.panels.sidebar.width = newWidth;
-            sidebar.style.width = newWidth + 'px';
+        
+        // Clamp width between min and max
+        const clampedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+        
+        if (clampedWidth !== state.panels.sidebar.width) {
+            state.panels.sidebar.width = clampedWidth;
+            sidebar.style.width = clampedWidth + 'px';
+        }
+    }
+
+    /**
+     * Resize terminal panel
+     */
+    function resizeTerminal(e) {
+        const terminal = document.getElementById('terminalSection');
+        if (!terminal) return;
+
+        const deltaY = state.startY - e.clientY; // Inverted because terminal grows upward
+        const newHeight = state.startHeight + deltaY;
+        
+        const { minHeight, maxHeight } = state.panels.terminal;
+        
+        // Clamp height between min and max
+        const clampedHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+        
+        if (clampedHeight !== state.panels.terminal.height) {
+            state.panels.terminal.height = clampedHeight;
+            terminal.style.height = clampedHeight + 'px';
         }
     }
 
@@ -369,13 +413,17 @@ const LayoutManager = (function() {
         const aiPanel = document.querySelector('.ai-panel');
         if (!aiPanel) return;
 
-        const panelRect = aiPanel.getBoundingClientRect();
-        const newWidth = panelRect.right - e.clientX;
+        const deltaX = state.startX - e.clientX; // Inverted because panel grows leftward
+        const newWidth = state.startWidth + deltaX;
         
         const { minWidth, maxWidth } = state.panels.aiPanel;
-        if (newWidth >= minWidth && newWidth <= maxWidth) {
-            state.panels.aiPanel.width = newWidth;
-            aiPanel.style.width = newWidth + 'px';
+        
+        // Clamp width between min and max
+        const clampedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+        
+        if (clampedWidth !== state.panels.aiPanel.width) {
+            state.panels.aiPanel.width = clampedWidth;
+            aiPanel.style.width = clampedWidth + 'px';
         }
     }
 
