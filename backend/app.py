@@ -83,11 +83,11 @@ def create_app(config_name='development'):
     from backend.socket_handlers import register_socket_handlers
     register_socket_handlers(socketio, app)
     
-    # Serve index.html at root
+    # Serve index.html at root (index.html is in project root, not static folder)
     @app.route('/')
     def index():
         """Serve the main index.html file"""
-        return send_from_directory(str(base_dir / 'static'), 'index.html')
+        return send_from_directory(str(base_dir), 'index.html')
     
     # Health check endpoint
     @app.route('/api/health')
