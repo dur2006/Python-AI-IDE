@@ -30,12 +30,14 @@ def main():
     print("="*60 + "\n")
     
     # Run application with SocketIO
+    # Note: use_reloader disabled for Python 3.13 compatibility
+    # (watchdog has threading issues with Python 3.13)
     socketio.run(
         app,
         host=host,
         port=port,
         debug=debug,
-        use_reloader=debug,
+        use_reloader=False,  # Disabled for Python 3.13 compatibility
         log_output=True
     )
 
