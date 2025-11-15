@@ -70,9 +70,8 @@ class AppInitializer {
             throw new Error('SocketClient not loaded');
         }
 
-        // Initialize connection to backend
-        const backendUrl = this.getBackendUrl();
-        window.socketClient.init(backendUrl);
+        // Initialize connection to backend (uses dynamic URL from window.location.origin)
+        window.socketClient.init();
 
         // Wait for connection (with timeout)
         await this.waitForConnection(5000);
@@ -237,23 +236,6 @@ class AppInitializer {
         });
 
         console.log('[AppInitializer] ✓ Error handlers setup');
-    }
-
-    /**
-     * Get backend URL from environment or default
-     * @returns {string} Backend URL
-     */
-    getBackendUrl() {
-        // Check if running in development or production
-        const isDevelopment = window.location.hostname === 'localhost' || 
-                             window.location.hostname === '127.0.0.1';
-        
-        if (isDevelopment) {
-            return 'http://localhost:5000';
-        }
-        
-        // In production, use same origin
-        return window.location.origin;
     }
 
     /**
