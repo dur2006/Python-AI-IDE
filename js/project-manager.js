@@ -7,9 +7,10 @@ class ProjectManager {
     constructor() {
         this.projects = [];
         this.currentProject = null;
-        this.apiBase = 'http://localhost:5000/api';
+        // Use dynamic API base URL to support both localhost and network access
+        this.apiBase = `${window.location.origin}/api`;
         this.initialized = false;
-        console.log('[ProjectManager] Instance created');
+        console.log('[ProjectManager] Instance created with API base:', this.apiBase);
     }
 
     async init() {
@@ -37,7 +38,13 @@ class ProjectManager {
 
     async loadProjects() {
         try {
+            console.log('[ProjectManager] Fetching projects from:', `${this.apiBase}/projects`);
             const response = await fetch(`${this.apiBase}/projects`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
             const data = await response.json();
             
             if (data.status === 'success') {
@@ -73,6 +80,10 @@ class ProjectManager {
                 body: JSON.stringify({ lastOpened: new Date().toISOString() })
             });
 
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
             const data = await response.json();
             if (data.status === 'success') {
                 this.currentProject = data.data;
@@ -95,6 +106,11 @@ class ProjectManager {
     async loadProjectFiles(projectId) {
         try {
             const response = await fetch(`${this.apiBase}/projects/${projectId}/files`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
             const data = await response.json();
             
             if (data.status === 'success') {
@@ -151,6 +167,10 @@ class ProjectManager {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, type, path })
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
 
             const data = await response.json();
             
@@ -225,6 +245,10 @@ class ProjectManager {
             const response = await fetch(`${this.apiBase}/projects/${projectId}`, {
                 method: 'DELETE'
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
 
             const data = await response.json();
             
