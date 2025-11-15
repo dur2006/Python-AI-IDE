@@ -1,203 +1,187 @@
 /**
  * AutoPilot IDE - Project Manager Module
- * Handles project creation, loading, switching, and persistence
+ * NOW PROPERLY INTEGRATED WITH BACKEND API
  */
 
 class ProjectManager {
     constructor() {
         this.projects = [];
         this.currentProject = null;
-        this.storageKey = 'autopilot_projects';
-        this.currentProjectKey = 'autopilot_current_project';
+        this.apiBase = 'http://localhost:5000/api';
         this.init();
     }
 
-    init() {
-        console.log('[ProjectManager] Initializing...');
-        this.loadProjects();
-        this.loadCurrentProject();
-        
-        if (!this.currentProject && this.projects.length > 0) {
-            this.setCurrentProject(this.projects[0].id);
-        }
-        
-        if (!this.currentProject) {
-            this.createDefaultProjects();
-        }
-    }
-
-    createDefaultProjects() {
-        console.log('[ProjectManager] Creating default projects...');
-        
-        const defaultProjects = [
-            {
-                id: 'autopilot-project-1',
-                name: 'AutoPilot-Project',
-                path: '/home/user/projects/AutoPilot-Project',
-                type: 'Python',
-                createdAt: new Date(Date.now() - 0 * 24 * 60 * 60 * 1000).toISOString(),
-                lastOpened: new Date().toISOString(),
-                files: [
-                    { name: 'main.py', type: 'file', icon: '📄' },
-                    { name: 'config.json', type: 'file', icon: '📄' },
-                    { name: 'README.md', type: 'file', icon: '📄' }
-                ]
-            },
-            {
-                id: 'webapp-demo-1',
-                name: 'WebApp-Demo',
-                path: '/home/user/projects/WebApp-Demo',
-                type: 'JavaScript',
-                createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-                lastOpened: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-                files: [
-                    { name: 'index.html', type: 'file', icon: '🌐' },
-                    { name: 'style.css', type: 'file', icon: '🎨' },
-                    { name: 'app.js', type: 'file', icon: '📄' }
-                ]
-            },
-            {
-                id: 'python-utils-1',
-                name: 'Python-Utils',
-                path: '/home/user/projects/Python-Utils',
-                type: 'Python',
-                createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-                lastOpened: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-                files: [
-                    { name: 'utils.py', type: 'file', icon: '📄' },
-                    { name: 'helpers.py', type: 'file', icon: '📄' },
-                    { name: 'tests.py', type: 'file', icon: '📄' }
-                ]
+    async init() {
+        console.log('[ProjectManager] Initializing with backend API...');
+        try {
+            await this.loadProjects();
+            
+            if (!this.currentProject && this.projects.length > 0) {
+                await this.setCurrentProject(this.projects[0].id);
             }
-        ];
-
-        this.projects = defaultProjects;
-        this.saveProjects();
-        this.setCurrentProject(defaultProjects[0].id);
-    }
-
-    saveProjects() {
-        try {
-            localStorage.setItem(this.storageKey, JSON.stringify(this.projects));
-            console.log('[ProjectManager] Projects saved to localStorage');
+            
+            console.log('[ProjectManager] Initialized successfully');
         } catch (error) {
-            console.error('[ProjectManager] Error saving projects:', error);
+            console.error('[ProjectManager] Initialization failed:', error);
+            this.showError('Failed to initialize project manager');
         }
     }
 
-    loadProjects() {
+    async loadProjects() {
         try {
-            const stored = localStorage.getItem(this.storageKey);
-            if (stored) {
-                this.projects = JSON.parse(stored);
-                console.log('[ProjectManager] Loaded', this.projects.length, 'projects from localStorage');
+            const response = await fetch(`${this.apiBase}/projects`);
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                this.projects = data.data || [];
+                console.log('[ProjectManager] Loaded', this.projects.length, 'projects from backend');
+                
+                // Load current project from localStorage (just the ID)
+                const currentProjectId = localStorage.getItem('autopilot_current_project');
+                if (currentProjectId) {
+                    this.currentProject = this.projects.find(p => p.id === currentProjectId);
+                }
+            } else {
+                throw new Error(data.error || 'Failed to load projects');
             }
         } catch (error) {
             console.error('[ProjectManager] Error loading projects:', error);
-            this.projects = [];
+            throw error;
         }
     }
 
-    loadCurrentProject() {
+    async setCurrentProject(projectId) {
         try {
-            const projectId = localStorage.getItem(this.currentProjectKey);
-            if (projectId) {
-                const project = this.projects.find(p => p.id === projectId);
-                if (project) {
-                    this.currentProject = project;
-                    console.log('[ProjectManager] Loaded current project:', project.name);
-                }
+            const project = this.projects.find(p => p.id === projectId);
+            if (!project) {
+                console.error('[ProjectManager] Project not found:', projectId);
+                return false;
+            }
+
+            // Update lastOpened on backend
+            const response = await fetch(`${this.apiBase}/projects/${projectId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lastOpened: new Date().toISOString() })
+            });
+
+            const data = await response.json();
+            if (data.status === 'success') {
+                this.currentProject = data.data;
+                localStorage.setItem('autopilot_current_project', projectId);
+                console.log('[ProjectManager] Current project set to:', project.name);
+                
+                // Load project files
+                await this.loadProjectFiles(projectId);
+                
+                return true;
+            } else {
+                throw new Error(data.error || 'Failed to set current project');
             }
         } catch (error) {
-            console.error('[ProjectManager] Error loading current project:', error);
+            console.error('[ProjectManager] Error setting current project:', error);
+            return false;
         }
     }
 
-    setCurrentProject(projectId) {
-        const project = this.projects.find(p => p.id === projectId);
-        if (project) {
-            this.currentProject = project;
-            project.lastOpened = new Date().toISOString();
-            this.saveProjects();
-            localStorage.setItem(this.currentProjectKey, projectId);
-            console.log('[ProjectManager] Current project set to:', project.name);
-            return true;
+    async loadProjectFiles(projectId) {
+        try {
+            const response = await fetch(`${this.apiBase}/projects/${projectId}/files`);
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                const files = data.data || [];
+                console.log('[ProjectManager] Loaded', files.length, 'files for project');
+                
+                // Update file explorer UI
+                if (window.updateFileExplorer) {
+                    window.updateFileExplorer(files);
+                }
+                
+                return files;
+            } else {
+                throw new Error(data.error || 'Failed to load project files');
+            }
+        } catch (error) {
+            console.error('[ProjectManager] Error loading project files:', error);
+            return [];
         }
-        return false;
     }
 
     getCurrentProject() {
         return this.currentProject;
     }
 
-    getRecentProjects(limit = 10) {
+    async getRecentProjects(limit = 10) {
+        // Sort by lastOpened
         return this.projects
             .sort((a, b) => new Date(b.lastOpened) - new Date(a.lastOpened))
             .slice(0, limit);
     }
 
-    createProject(name, type, path) {
-        const id = `project-${Date.now()}`;
-        const project = {
-            id,
-            name,
-            type,
-            path: path || `/home/user/projects/${name}`,
-            createdAt: new Date().toISOString(),
-            lastOpened: new Date().toISOString(),
-            files: this.getDefaultFilesForType(type)
-        };
+    async createProject(name, type, path) {
+        try {
+            const response = await fetch(`${this.apiBase}/projects`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, type, path })
+            });
 
-        this.projects.push(project);
-        this.saveProjects();
-        this.setCurrentProject(id);
-        console.log('[ProjectManager] Project created:', name);
-        return project;
-    }
-
-    getDefaultFilesForType(type) {
-        const fileMap = {
-            'Python': [
-                { name: 'main.py', type: 'file', icon: '📄' },
-                { name: 'config.py', type: 'file', icon: '📄' },
-                { name: 'README.md', type: 'file', icon: '📄' }
-            ],
-            'JavaScript': [
-                { name: 'index.js', type: 'file', icon: '📄' },
-                { name: 'package.json', type: 'file', icon: '📦' },
-                { name: 'README.md', type: 'file', icon: '📄' }
-            ],
-            'Web App': [
-                { name: 'index.html', type: 'file', icon: '🌐' },
-                { name: 'style.css', type: 'file', icon: '🎨' },
-                { name: 'script.js', type: 'file', icon: '📄' }
-            ],
-            'Empty': []
-        };
-
-        return fileMap[type] || [];
-    }
-
-    deleteProject(projectId) {
-        const index = this.projects.findIndex(p => p.id === projectId);
-        if (index !== -1) {
-            const project = this.projects[index];
-            this.projects.splice(index, 1);
-            this.saveProjects();
+            const data = await response.json();
             
-            if (this.currentProject?.id === projectId) {
-                this.setCurrentProject(this.projects[0]?.id || null);
+            if (data.status === 'success') {
+                const project = data.data;
+                this.projects.push(project);
+                await this.setCurrentProject(project.id);
+                console.log('[ProjectManager] Project created:', name);
+                return project;
+            } else {
+                throw new Error(data.error || 'Failed to create project');
             }
-            
-            console.log('[ProjectManager] Project deleted:', project.name);
-            return true;
+        } catch (error) {
+            console.error('[ProjectManager] Error creating project:', error);
+            this.showError('Failed to create project: ' + error.message);
+            throw error;
         }
-        return false;
     }
 
-    getProjectFiles(projectId) {
-        const project = this.projects.find(p => p.id === projectId);
-        return project ? project.files : [];
+    async deleteProject(projectId) {
+        try {
+            const response = await fetch(`${this.apiBase}/projects/${projectId}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                const index = this.projects.findIndex(p => p.id === projectId);
+                if (index !== -1) {
+                    const project = this.projects[index];
+                    this.projects.splice(index, 1);
+                    
+                    if (this.currentProject?.id === projectId) {
+                        if (this.projects.length > 0) {
+                            await this.setCurrentProject(this.projects[0].id);
+                        } else {
+                            this.currentProject = null;
+                        }
+                    }
+                    
+                    console.log('[ProjectManager] Project deleted:', project.name);
+                    return true;
+                }
+            } else {
+                throw new Error(data.error || 'Failed to delete project');
+            }
+        } catch (error) {
+            console.error('[ProjectManager] Error deleting project:', error);
+            this.showError('Failed to delete project: ' + error.message);
+            return false;
+        }
+    }
+
+    async getProjectFiles(projectId) {
+        return await this.loadProjectFiles(projectId);
     }
 
     formatDate(isoString) {
@@ -211,6 +195,14 @@ class ProjectManager {
         if (diffDays < 7) return `Opened ${diffDays} days ago`;
         if (diffDays < 30) return `Opened ${Math.floor(diffDays / 7)} weeks ago`;
         return `Opened ${Math.floor(diffDays / 30)} months ago`;
+    }
+
+    showError(message) {
+        console.error('[ProjectManager]', message);
+        // Show error in UI if available
+        if (window.showNotification) {
+            window.showNotification(message, 'error');
+        }
     }
 }
 
