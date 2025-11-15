@@ -15,11 +15,14 @@ class SocketClient {
 
     /**
      * Initialize socket connection
+     * Uses dynamic URL based on current page origin
      */
-    init(url = 'http://localhost:5000') {
-        console.log('[SocketClient] Initializing connection to:', url);
+    init(url = null) {
+        // Use provided URL or default to current origin
+        const socketUrl = url || window.location.origin;
+        console.log('[SocketClient] Initializing connection to:', socketUrl);
         
-        this.socket = io(url, {
+        this.socket = io(socketUrl, {
             reconnection: true,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
