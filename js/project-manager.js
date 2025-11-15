@@ -9,6 +9,7 @@ class ProjectManager {
         this.currentProject = null;
         this.apiBase = 'http://localhost:5000/api';
         this.initialized = false;
+        console.log('[ProjectManager] Instance created');
     }
 
     async init() {
@@ -283,4 +284,4 @@ class ProjectManager {
 // Create global instance and assign to window
 window.projectManager = new ProjectManager();
 
-console.log('[ProjectManager] Module loaded');
+console.log('[ProjectManager] Module loaded - instance available at window.projectManager');
