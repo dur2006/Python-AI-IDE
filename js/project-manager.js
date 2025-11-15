@@ -8,10 +8,15 @@ class ProjectManager {
         this.projects = [];
         this.currentProject = null;
         this.apiBase = 'http://localhost:5000/api';
-        this.init();
+        this.initialized = false;
     }
 
     async init() {
+        if (this.initialized) {
+            console.log('[ProjectManager] Already initialized');
+            return;
+        }
+
         console.log('[ProjectManager] Initializing with backend API...');
         try {
             await this.loadProjects();
@@ -20,10 +25,12 @@ class ProjectManager {
                 await this.setCurrentProject(this.projects[0].id);
             }
             
+            this.initialized = true;
             console.log('[ProjectManager] Initialized successfully');
         } catch (error) {
             console.error('[ProjectManager] Initialization failed:', error);
             this.showError('Failed to initialize project manager');
+            throw error;
         }
     }
 
@@ -112,11 +119,28 @@ class ProjectManager {
         return this.currentProject;
     }
 
+    getLastProject() {
+        // Get the most recently opened project
+        if (this.projects.length === 0) return null;
+        
+        const sorted = [...this.projects].sort((a, b) => {
+            const dateA = new Date(a.lastOpened || 0);
+            const dateB = new Date(b.lastOpened || 0);
+            return dateB - dateA;
+        });
+        
+        return sorted[0];
+    }
+
     async getRecentProjects(limit = 10) {
         // Sort by lastOpened
         return this.projects
             .sort((a, b) => new Date(b.lastOpened) - new Date(a.lastOpened))
             .slice(0, limit);
+    }
+
+    async loadProject(projectId) {
+        return await this.setCurrentProject(projectId);
     }
 
     async createProject(name, type, path) {
@@ -143,6 +167,56 @@ class ProjectManager {
             this.showError('Failed to create project: ' + error.message);
             throw error;
         }
+    }
+
+    async createNewProject() {
+        console.log('[ProjectManager] Opening new project dialog');
+        this.showProjectModal();
+    }
+
+    showProjectModal() {
+        console.log('[ProjectManager] Showing project modal');
+        const modal = document.getElementById('projectModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            // TODO: Populate with project list
+        }
+    }
+
+    async createNewFile() {
+        console.log('[ProjectManager] Creating new file');
+        if (!this.currentProject) {
+            this.showError('No project selected');
+            return;
+        }
+        // TODO: Implement file creation
+    }
+
+    async createNewFolder() {
+        console.log('[ProjectManager] Creating new folder');
+        if (!this.currentProject) {
+            this.showError('No project selected');
+            return;
+        }
+        // TODO: Implement folder creation
+    }
+
+    async refreshFileTree() {
+        console.log('[ProjectManager] Refreshing file tree');
+        if (!this.currentProject) {
+            return;
+        }
+        await this.loadProjectFiles(this.currentProject.id);
+    }
+
+    async saveCurrentFile() {
+        console.log('[ProjectManager] Saving current file');
+        // TODO: Implement file saving
+    }
+
+    async saveAllFiles() {
+        console.log('[ProjectManager] Saving all files');
+        // TODO: Implement save all
     }
 
     async deleteProject(projectId) {
@@ -206,5 +280,7 @@ class ProjectManager {
     }
 }
 
-// Create global instance
-const projectManager = new ProjectManager();
+// Create global instance and assign to window
+window.projectManager = new ProjectManager();
+
+console.log('[ProjectManager] Module loaded');
