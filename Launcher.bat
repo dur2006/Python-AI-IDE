@@ -78,6 +78,7 @@ echo.
 echo Press Ctrl+C to stop the server
 echo.
 
-python app.py
+REM Run the backend app from the backend directory
+python backend/app.py
 
 pause
